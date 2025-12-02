@@ -1,0 +1,16 @@
+# FastAPI Backend Requirements
+# These are additional to the main project requirements.txt
+
+# Web framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.6
+
+# CORS support
+python-dotenv==1.0.0
+
+# Async support (already in main requirements but listed for clarity)
+# asyncio - built-in
+
+# Note: All other dependencies (Azure OpenAI, Azure Search, PyMuPDF, etc.)
+# are inherited from the main requirements.txt in the project root

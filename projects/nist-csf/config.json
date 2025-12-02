@@ -1,0 +1,10 @@
+{
+  "name": "nist-csf",
+  "description": "NIST Cybersecurity Framework 2.0 - A comprehensive framework for managing and reducing cybersecurity risks",
+  "extraction_instructions": "You are extracting content from the NIST Cybersecurity Framework (CSF) 2.0 document.\n\nFocus on:\n- The six CSF Functions: Govern, Identify, Protect, Detect, Respond, Recover\n- Categories and Subcategories under each Function\n- Implementation examples and guidance\n- Risk management concepts and terminology\n- References to other NIST publications (SP 800 series)\n- Organizational profiles and tiers\n\nPreserve:\n- All table structures (especially the CSF Core tables)\n- Hierarchical relationships between Functions, Categories, and Subcategories\n- Cross-references and citations\n- Exact terminology (e.g., 'GV.OC-01', 'ID.AM-02')",
+  "status": {
+    "is_indexed": true,
+    "has_agent": true,
+    "agent_name": "prism-nist-csf-index-agent"
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "sections": [
+    {
+      "id": "governance",
+      "name": "Governance (GV)",
+      "template": "Answer questions about CSF governance requirements. Focus on organizational context, risk management strategy, roles and responsibilities, policies, and oversight. Reference specific GV subcategories when applicable.",
+      "questions": [
+        {
+          "id": "gv1",
+          "question": "What are the key governance activities in CSF 2.0?",
+          "instructions": "Look for GV.OC, GV.RM, GV.RR, GV.PO, GV.SC categories"
+        },
+        {
+          "id": "gv2",
+          "question": "How should organizations establish cybersecurity risk management strategy?",
+          "instructions": "Focus on GV.RM subcategories"
+        }
+      ]
+    },
+    {
+      "id": "identify",
+      "name": "Identify (ID)",
+      "template": "Answer questions about asset management, risk assessment, and improvement activities. Reference specific ID subcategories.",
+      "questions": [
+        {
+          "id": "id1",
+          "question": "What assets should be inventoried according to CSF?",
+          "instructions": "Look for ID.AM subcategories"
+        },
+        {
+          "id": "id2",
+          "question": "How should organizations conduct risk assessments?",
+          "instructions": "Focus on ID.RA subcategories"
+        }
+      ]
+    },
+    {
+      "id": "protect",
+      "name": "Protect (PR)",
+      "template": "Answer questions about safeguards for critical infrastructure. Focus on identity management, access control, awareness training, data security, and platform security.",
+      "questions": [
+        {
+          "id": "pr1",
+          "question": "What are the identity management requirements?",
+          "instructions": "Look for PR.AA subcategories"
+        },
+        {
+          "id": "pr2",
+          "question": "What data security controls are recommended?",
+          "instructions": "Focus on PR.DS subcategories"
+        }
+      ]
+    },
+    {
+      "id": "detect",
+      "name": "Detect (DE)",
+      "template": "Answer questions about continuous monitoring and adverse event analysis. Reference DE subcategories.",
+      "questions": [
+        {
+          "id": "de1",
+          "question": "What continuous monitoring activities are required?",
+          "instructions": "Look for DE.CM subcategories"
+        }
+      ]
+    },
+    {
+      "id": "respond",
+      "name": "Respond (RS)",
+      "template": "Answer questions about incident response activities including management, analysis, reporting, and mitigation.",
+      "questions": [
+        {
+          "id": "rs1",
+          "question": "What are the incident response requirements?",
+          "instructions": "Look for RS.MA, RS.AN, RS.CO, RS.MI subcategories"
+        }
+      ]
+    },
+    {
+      "id": "recover",
+      "name": "Recover (RC)",
+      "template": "Answer questions about recovery planning and execution after cybersecurity incidents.",
+      "questions": [
+        {
+          "id": "rc1",
+          "question": "What recovery activities should organizations plan for?",
+          "instructions": "Look for RC.RP and RC.CO subcategories"
+        }
+      ]
+    }
+  ]
+}

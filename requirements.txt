@@ -1,0 +1,31 @@
+# Microsoft Agent Framework
+agent-framework
+agent-framework-devui
+
+# Azure Management SDKs
+azure-mgmt-resource
+azure-mgmt-storage
+azure-mgmt-search
+azure-identity
+
+# Azure Services
+azure-search-documents==11.7.0b1  # Preview version for Knowledge Agent APIs
+azure-storage-blob
+openai
+
+# Required dependencies
+typing-extensions
+python-dotenv
+extract-msg  # For .msg file extraction
+openpyxl  # For Excel file extraction
+PyMuPDF  # For PDF analysis and image extraction
+pymupdf4llm  # LLM-optimized markdown extraction from PDFs
+pymupdf-layout  # Advanced layout analysis (auto header/footer detection)
+
+# RAG pipeline dependencies
+langchain-text-splitters  # Semantic chunking with markdown support
+tiktoken  # Token counting for chunking
+
+# Testing
+pytest
+pytest-asyncio  # For testing async functions

@@ -1,0 +1,44 @@
+# Prism - Document to Knowledge Pipeline
+#
+# Usage (from project root):
+#   docker-compose -f infra/docker/docker-compose.yml --env-file .env up -d
+#   docker-compose -f infra/docker/docker-compose.yml --env-file .env up -d --build
+#   docker-compose -f infra/docker/docker-compose.yml down
+#   docker-compose -f infra/docker/docker-compose.yml logs -f backend
+
+services:
+  backend:
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+    container_name: prism-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../..:/app
+      - ../../projects:/app/projects
+      - ../../workflows:/app/workflows
+    env_file:
+      - ../../.env
+    restart: unless-stopped
+    networks:
+      - prism-network
+
+  frontend:
+    build:
+      context: ../../apps/web
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://localhost:8000
+    container_name: prism-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - prism-network
+
+networks:
+  prism-network:
+    driver: bridge
