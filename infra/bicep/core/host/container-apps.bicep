@@ -270,7 +270,7 @@ resource frontendApp 'Microsoft.App/containerApps@2024-03-01' = {
           }
           env: [
             {
-              name: 'VITE_API_URL'
+              name: 'BACKEND_URL'
               value: 'https://${backendApp.properties.configuration.ingress.fqdn}'
             }
           ]

@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.38.33.27573",
-      "templateHash": "8667716523024733544"
+      "templateHash": "1002099733477976277"
     }
   },
   "parameters": {
@@ -342,6 +342,9 @@
           },
           "applicationInsightsId": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'monitoring'), '2025-04-01').outputs.applicationInsightsId.value]"
+          },
+          "applicationInsightsConnectionString": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'monitoring'), '2025-04-01').outputs.applicationInsightsConnectionString.value]"
           }
         },
         "template": {
@@ -351,7 +354,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.38.33.27573",
-              "templateHash": "11101264367823279514"
+              "templateHash": "13220777363724035654"
             }
           },
           "parameters": {
@@ -401,18 +404,32 @@
                 "description": "Application Insights resource ID"
               }
             },
+            "applicationInsightsConnectionString": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Application Insights connection string"
+              }
+            },
             "skuName": {
               "type": "string",
               "defaultValue": "S0",
               "metadata": {
                 "description": "SKU name for Cognitive Services"
               }
+            },
+            "restore": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "Restore a soft-deleted resource instead of creating new"
+              }
             }
           },
           "resources": [
             {
               "type": "Microsoft.CognitiveServices/accounts",
-              "apiVersion": "2024-10-01",
+              "apiVersion": "2025-04-01-preview",
               "name": "[parameters('accountName')]",
               "location": "[parameters('location')]",
               "tags": "[parameters('tags')]",
@@ -426,7 +443,9 @@
               "properties": {
                 "customSubDomainName": "[parameters('accountName')]",
                 "publicNetworkAccess": "Enabled",
-                "disableLocalAuth": false
+                "disableLocalAuth": false,
+                "allowProjectManagement": true,
+                "restore": "[parameters('restore')]"
               }
             },
             {
@@ -454,7 +473,7 @@
                 "batchSize": 1
               },
               "type": "Microsoft.CognitiveServices/accounts/deployments",
-              "apiVersion": "2024-10-01",
+              "apiVersion": "2025-04-01-preview",
               "name": "[format('{0}/{1}', parameters('accountName'), parameters('modelDeployments')[copyIndex()].name)]",
               "sku": "[parameters('modelDeployments')[copyIndex()].sku]",
               "properties": {
@@ -494,11 +513,18 @@
               "condition": "[not(empty(parameters('applicationInsightsId')))]",
               "type": "Microsoft.CognitiveServices/accounts/projects/connections",
               "apiVersion": "2025-04-01-preview",
-              "name": "[format('{0}/{1}/{2}', parameters('accountName'), parameters('projectName'), 'appinsights')]",
+              "name": "[format('{0}/{1}/{2}', parameters('accountName'), parameters('projectName'), 'appi-connection')]",
               "properties": {
                 "category": "AppInsights",
                 "target": "[parameters('applicationInsightsId')]",
-                "authType": "AAD"
+                "authType": "ApiKey",
+                "isSharedToAll": true,
+                "credentials": {
+                  "key": "[parameters('applicationInsightsConnectionString')]"
+                },
+                "metadata": {
+                  "ApiType": "Azure"
+                }
               },
               "dependsOn": [
                 "[resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('accountName'), parameters('projectName'))]"
@@ -524,15 +550,15 @@
             },
             "endpoint": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName')), '2024-10-01').endpoint]"
+              "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName')), '2025-04-01-preview').endpoint]"
             },
             "key": {
               "type": "string",
-              "value": "[listKeys(resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName')), '2024-10-01').key1]"
+              "value": "[listKeys(resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName')), '2025-04-01-preview').key1]"
             },
             "principalId": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName')), '2024-10-01', 'full').identity.principalId]"
+              "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName')), '2025-04-01-preview', 'full').identity.principalId]"
             }
           }
         }
@@ -1447,15 +1473,15 @@
     },
     "AZURE_CONTAINER_REGISTRY_ENDPOINT": {
       "type": "string",
-      "value": "[if(and(parameters('deployContainerApps'), not(equals(reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'container-apps'), '2025-04-01'), null()))), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'container-apps'), '2025-04-01').outputs.registryLoginServer.value, '')]"
+      "value": "[if(parameters('deployContainerApps'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'container-apps'), '2025-04-01').outputs.registryLoginServer.value, '')]"
     },
     "BACKEND_URL": {
       "type": "string",
-      "value": "[if(and(parameters('deployContainerApps'), not(equals(reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'container-apps'), '2025-04-01'), null()))), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'container-apps'), '2025-04-01').outputs.backendUrl.value, '')]"
+      "value": "[if(parameters('deployContainerApps'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'container-apps'), '2025-04-01').outputs.backendUrl.value, '')]"
     },
     "FRONTEND_URL": {
       "type": "string",
-      "value": "[if(and(parameters('deployContainerApps'), not(equals(reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'container-apps'), '2025-04-01'), null()))), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'container-apps'), '2025-04-01').outputs.frontendUrl.value, '')]"
+      "value": "[if(parameters('deployContainerApps'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'container-apps'), '2025-04-01').outputs.frontendUrl.value, '')]"
     },
     "APPLICATIONINSIGHTS_CONNECTION_STRING": {
       "type": "string",

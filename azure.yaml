@@ -22,6 +22,8 @@ services:
     docker:
       path: Dockerfile
       context: .
+      buildArgs:
+        - VITE_API_URL=${BACKEND_URL}
 
 hooks:
   postprovision:

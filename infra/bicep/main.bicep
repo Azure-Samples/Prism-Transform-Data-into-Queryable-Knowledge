@@ -68,7 +68,7 @@ param embeddingCapacity int = 120
 @description('Deploy Container Apps for hosting')
 param deployContainerApps bool = true
 
-@description('Auth password for the application')
+@description('Auth password for the application (auto-generated if not provided)')
 @secure()
 param authPassword string = ''
 
@@ -78,6 +78,8 @@ param authPassword string = ''
 
 var abbrs = loadJsonContent('abbreviations.json')
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
+// Generate a password if none provided
+var effectiveAuthPassword = !empty(authPassword) ? authPassword : 'Prism${uniqueString(subscription().id, environmentName, 'auth')}!'
 var tags = {
   'azd-env-name': environmentName
   'application': 'prism'
@@ -152,6 +154,7 @@ module aiFoundry 'core/ai/ai-foundry.bicep' = {
     modelDeployments: modelDeployments
     logAnalyticsWorkspaceId: monitoring.outputs.logAnalyticsWorkspaceId
     applicationInsightsId: monitoring.outputs.applicationInsightsId
+    applicationInsightsConnectionString: monitoring.outputs.applicationInsightsConnectionString
   }
 }
 
@@ -211,7 +214,7 @@ module containerApps 'core/host/container-apps.bicep' = if (deployContainerApps)
     searchEndpoint: search.outputs.endpoint
     searchAdminKey: search.outputs.adminKey
     // Auth
-    authPassword: authPassword
+    authPassword: effectiveAuthPassword
     // Monitoring
     applicationInsightsConnectionString: monitoring.outputs.applicationInsightsConnectionString
   }
@@ -266,3 +269,7 @@ output FRONTEND_URL string = deployContainerApps ? containerApps.outputs.fronten
 
 // Monitoring
 output APPLICATIONINSIGHTS_CONNECTION_STRING string = monitoring.outputs.applicationInsightsConnectionString
+
+// Auth (output the effective password so user knows it)
+#disable-next-line outputs-should-not-contain-secrets
+output AUTH_PASSWORD string = effectiveAuthPassword

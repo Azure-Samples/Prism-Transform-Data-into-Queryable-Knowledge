@@ -22,14 +22,20 @@ param logAnalyticsWorkspaceId string = ''
 @description('Application Insights resource ID')
 param applicationInsightsId string = ''
 
+@description('Application Insights connection string')
+param applicationInsightsConnectionString string = ''
+
 @description('SKU name for Cognitive Services')
 param skuName string = 'S0'
+
+@description('Restore a soft-deleted resource instead of creating new')
+param restore bool = false
 
 // ============================================================================
 // Cognitive Services Account (AI Foundry Hub)
 // ============================================================================
 
-resource aiServicesAccount 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
+resource aiServicesAccount 'Microsoft.CognitiveServices/accounts@2025-04-01-preview' = {
   name: accountName
   location: location
   tags: tags
@@ -44,6 +50,8 @@ resource aiServicesAccount 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
     customSubDomainName: accountName
     publicNetworkAccess: 'Enabled'
     disableLocalAuth: false
+    allowProjectManagement: true
+    restore: restore
   }
 }
 
@@ -70,7 +78,7 @@ resource aiProject 'Microsoft.CognitiveServices/accounts/projects@2025-04-01-pre
 // ============================================================================
 
 @batchSize(1)
-resource deployments 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = [for deployment in modelDeployments: {
+resource deployments 'Microsoft.CognitiveServices/accounts/deployments@2025-04-01-preview' = [for deployment in modelDeployments: {
   parent: aiServicesAccount
   name: deployment.name
   sku: deployment.sku
@@ -110,11 +118,18 @@ resource diagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' 
 
 resource appInsightsConnection 'Microsoft.CognitiveServices/accounts/projects/connections@2025-04-01-preview' = if (!empty(applicationInsightsId)) {
   parent: aiProject
-  name: 'appinsights'
+  name: 'appi-connection'
   properties: {
     category: 'AppInsights'
     target: applicationInsightsId
-    authType: 'AAD'
+    authType: 'ApiKey'
+    isSharedToAll: true
+    credentials: {
+      key: applicationInsightsConnectionString
+    }
+    metadata: {
+      ApiType: 'Azure'
+    }
   }
 }
 
