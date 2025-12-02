@@ -39,39 +39,64 @@ Transform unstructured documents into queryable knowledge. Upload files, extract
 - Docker + Docker Compose
 - Azure Container Apps ready
 
-## Prerequisites
+## Quick Start
 
-### Required Software
-- Docker & Docker Compose (recommended for running the app)
-- For local development only:
-  - Python 3.11+
-  - Node.js 20+
+### Option 1: Deploy Everything with `azd` (Recommended)
 
-### Azure Resources
+The fastest way to get started. Deploys all Azure resources and the app with one command.
 
-You need two Azure services. Basic/Free tiers work fine for development.
+**Prerequisites:**
+- [Azure Developer CLI (azd)](https://aka.ms/azd-install)
+- [Docker](https://docs.docker.com/get-docker/)
+- Azure subscription
 
-**1. Azure OpenAI Service**
-- Create an Azure OpenAI resource in [Azure Portal](https://portal.azure.com)
-- Deploy a GPT-4 model (any variant: gpt-4, gpt-4o, gpt-4-turbo)
-- Note your endpoint, API key, and deployment name
+**Deploy:**
+```bash
+# Login to Azure
+azd auth login
 
-**2. Azure AI Search**
-- Create an Azure AI Search resource (Basic tier is sufficient)
-- Note your endpoint and admin key
+# Deploy everything (infrastructure + app)
+azd up
+```
 
-## Quick Start (Docker - Recommended)
+You'll be prompted for:
+- **Environment name** (e.g., `dev`, `prod`)
+- **Azure subscription** to use
+- **Azure region** (e.g., `eastus`)
+- **Auth password** for the application
 
-### 1. Configure
+**What gets deployed:**
+- AI Foundry with gpt-4.1 and text-embedding-3-large models
+- Azure AI Search with semantic ranking
+- Container Apps (backend + frontend)
+- Container Registry
+- Monitoring (Log Analytics + Application Insights)
+
+After deployment completes:
+- `.env` file is auto-generated with all credentials
+- App is live at the Container Apps URL shown in output
+- Or run locally: `docker-compose -f infra/docker/docker-compose.yml --env-file .env up -d`
+
+### Option 2: Use Existing Azure Resources
+
+If you already have Azure OpenAI and AI Search resources.
+
+**Prerequisites:**
+- Docker & Docker Compose
+- Existing Azure OpenAI resource with gpt-4.1 deployment
+- Existing Azure AI Search resource
+
+**Configure:**
 
 Create `.env` file:
 ```bash
-# Azure OpenAI
+# Azure OpenAI / AI Foundry
 AZURE_OPENAI_API_KEY=your-key
-AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com
-AZURE_OPENAI_MODEL_NAME=gpt-4
+AZURE_OPENAI_ENDPOINT=https://your-resource.cognitiveservices.azure.com
+AZURE_OPENAI_MODEL_NAME=gpt-4.1
 AZURE_OPENAI_API_VERSION=2025-01-01-preview
-AZURE_OPENAI_CHAT_DEPLOYMENT_NAME=gpt-4
+AZURE_OPENAI_CHAT_DEPLOYMENT_NAME=gpt-4.1
+AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME=text-embedding-3-large
 
 # Azure AI Search
 AZURE_SEARCH_ENDPOINT=https://your-search.search.windows.net
@@ -81,19 +106,18 @@ AZURE_SEARCH_ADMIN_KEY=your-key
 AUTH_PASSWORD=your-secure-password
 ```
 
-### 2. Run
-
+**Run:**
 ```bash
 docker-compose -f infra/docker/docker-compose.yml --env-file .env up -d
 ```
 
-Access:
+**Access:**
 - **App**: http://localhost:3000
 - **API**: http://localhost:8000/docs
 
-### 3. Use
+### Using the App
 
-1. Login with your password
+1. Login with your auth password
 2. Create a new project
 3. Upload documents
 4. Click "Process" to extract content
@@ -179,7 +203,8 @@ prism/
 │   ├── rag/              # Chunking & embedding
 │   └── search_index/     # Index management
 ├── infra/
-│   ├── azure/            # Deployment scripts
+│   ├── bicep/            # azd infrastructure (AI Foundry, Search, Container Apps)
+│   ├── azure/            # Legacy deployment scripts
 │   └── docker/           # Docker configuration
 └── tests/                # Test suite
 ```
@@ -198,13 +223,32 @@ To configure a project:
 
 ## Deployment
 
-### Azure Container Apps
+### Azure Container Apps (Recommended)
+
+Use `azd` for the simplest deployment experience:
+
+```bash
+# First time: provision infrastructure + deploy app
+azd up
+
+# Subsequent deploys: just update the app
+azd deploy
+
+# Tear down all resources
+azd down
+```
+
+### Manual Deployment (Legacy)
+
+If you prefer manual control or can't use `azd`:
 
 ```bash
 cd infra/azure
 ./deploy.sh dev    # Deploy to dev
 ./deploy.sh prod   # Deploy to production
 ```
+
+Note: Manual deployment requires existing Azure OpenAI and AI Search resources.
 
 ## API
 

@@ -186,10 +186,6 @@ module searchConnection 'core/ai/connection.bicep' = {
     connectionTarget: search.outputs.endpoint
     connectionApiKey: search.outputs.adminKey
   }
-  dependsOn: [
-    aiFoundry
-    search
-  ]
 }
 
 // ============================================================================
@@ -261,8 +257,11 @@ output AZURE_SEARCH_SERVICE_NAME string = search.outputs.name
 output AZURE_SEARCH_ADMIN_KEY string = search.outputs.adminKey
 
 // Container Apps (conditional)
+#disable-next-line BCP318
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = deployContainerApps ? containerApps.outputs.registryLoginServer : ''
+#disable-next-line BCP318
 output BACKEND_URL string = deployContainerApps ? containerApps.outputs.backendUrl : ''
+#disable-next-line BCP318
 output FRONTEND_URL string = deployContainerApps ? containerApps.outputs.frontendUrl : ''
 
 // Monitoring
