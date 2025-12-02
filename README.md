@@ -63,7 +63,6 @@ You'll be prompted for:
 - **Environment name** (e.g., `dev`, `prod`)
 - **Azure subscription** to use
 - **Azure region** (e.g., `eastus`)
-- **Auth password** for the application
 
 **What gets deployed:**
 - AI Foundry with gpt-4.1 and text-embedding-3-large models
@@ -73,8 +72,12 @@ You'll be prompted for:
 - Monitoring (Log Analytics + Application Insights)
 
 After deployment completes:
-- `.env` file is auto-generated with all credentials
 - App is live at the Container Apps URL shown in output
+- Auth password is auto-generated - get it with:
+  ```bash
+  az containerapp secret show --name prism-backend --resource-group <your-rg> --secret-name auth-password --query value -o tsv
+  ```
+- `.env` file is auto-generated for local development
 - Or run locally: `docker-compose -f infra/docker/docker-compose.yml --env-file .env up -d`
 
 ### Option 2: Use Existing Azure Resources
