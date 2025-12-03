@@ -24,7 +24,7 @@ A production-grade RAG (Retrieval-Augmented Generation) platform that transforms
 [![Open in GitHub Codespaces](https://img.shields.io/static/v1?style=for-the-badge&label=GitHub+Codespaces&message=Open&color=brightgreen&logo=github)](https://codespaces.new/Azure-Samples/Prism---Transform-Data-into-Queryable-Knowledge?devcontainer_path=.devcontainer%2Fdevcontainer.json)
 [![Open in Dev Containers](https://img.shields.io/static/v1?style=for-the-badge&label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/Azure-Samples/Prism---Transform-Data-into-Queryable-Knowledge)
 
-[▶️ **Watch the 3-minute demo** - Document extraction, RAG pipeline, and workflow automation](docs/images/prism.mp4)
+https://github.com/user-attachments/assets/d1d9e2da-0d46-46ec-bdfb-402132ac18df
 
 ## Important Security Notice
 
