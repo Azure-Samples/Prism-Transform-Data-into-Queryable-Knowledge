@@ -1,0 +1,188 @@
+1
+00:00:00,880 --> 00:00:01,440
+Hi there.
+
+2
+00:00:01,680 --> 00:00:07,280
+So this will be just a quick demonstration of the capabilities of our latest Prism Accelerator.
+
+3
+00:00:08,160 --> 00:00:16,160
+So when you first load the application, you'll be greeted by this screen where you will see one of our example templates that's already provided.
+
+4
+00:00:16,239 --> 00:00:19,280
+This accelerator is shipped with some sample data.
+
+5
+00:00:19,760 --> 00:00:25,040
+So we can click into here and we immediately see what documents are as part of our project.
+
+6
+00:00:25,280 --> 00:00:32,960
+So we've got one document here and we can essentially follow this process in order to extract, chunk, embed, and add them to a search index and knowledge agent.
+
+7
+00:00:35,440 --> 00:00:37,600
+So we're going to start by the extraction.
+
+8
+00:00:38,000 --> 00:00:42,760
+You should see a progress bar that will inform you how many pages are done and how many are left.
+
+9
+00:00:43,053 --> 00:00:44,853
+This process is fully asynchronous.
+
+10
+00:00:44,853 --> 00:00:50,933
+So for a large document basis, you may leave this screen and come back to it later.
+
+11
+00:00:50,973 --> 00:00:54,253
+It will essentially process the documents in its own time.
+
+12
+00:00:56,013 --> 00:00:57,613
+It does have smart filtering.
+
+13
+00:00:57,613 --> 00:01:04,733
+So only for pages that contain images or diagrams, it will enable the vision extraction.
+
+14
+00:01:04,733 --> 00:01:10,613
+Otherwise, it will use the out-of-the-box extraction capabilities that, you know, PDF libraries come equipped with.
+
+15
+00:01:11,693 --> 00:01:18,013
+So it's essentially trying to save us tokens and save us time by extracting in the most efficient way possible.
+
+16
+00:01:18,576 --> 00:01:20,176
+Okay, then we will chunk.
+
+17
+00:01:21,536 --> 00:01:23,216
+We've created 23 chunks.
+
+18
+00:01:23,856 --> 00:01:26,176
+We will run embedding on those 23 chunks.
+
+19
+00:01:26,823 --> 00:01:28,743
+We will then create a search index.
+
+20
+00:01:29,300 --> 00:01:31,380
+And finally, we'll create a knowledge agent.
+
+21
+00:01:33,460 --> 00:01:36,500
+And after we've created a knowledge agent, we can ask some questions.
+
+22
+00:01:37,833 --> 00:01:39,673
+And we can see it working just fine.
+
+23
+00:01:39,673 --> 00:01:44,393
+It will give us the answer, as well as it will provide us where exactly the information is coming from.
+
+24
+00:01:44,393 --> 00:01:46,073
+So there are four chunks that it found.
+
+25
+00:01:46,713 --> 00:01:49,833
+Another important part is we can now configure the workflows.
+
+26
+00:01:49,833 --> 00:01:53,873
+So some of these questions can be asked sequentially in a structured manner.
+
+27
+00:01:54,553 --> 00:01:57,353
+So we've got an example of a workflow configuration.
+
+28
+00:01:57,353 --> 00:02:01,113
+You can add new sections or you can add questions to an existing section.
+
+29
+00:02:01,993 --> 00:02:03,833
+So pretty straightforward.
+
+30
+00:02:03,833 --> 00:02:08,233
+So you basically can shape the question and answer workflow however you want.
+
+31
+00:02:08,633 --> 00:02:14,473
+So let's just go ahead, click into sections, and then basically we can just run an example workflow.
+
+32
+00:02:14,933 --> 00:02:19,413
+These are only two questions, so it shouldn't be a particularly long process for us to wait for.
+
+33
+00:02:19,640 --> 00:02:24,960
+Okay, one already completed and the second one completed.
+
+34
+00:02:24,960 --> 00:02:35,760
+So we can see in our results pages, in our result page, the answers to our questions as well as the comments that the application is provided.
+
+35
+00:02:35,760 --> 00:02:39,480
+So that basically is it.
+
+36
+00:02:39,480 --> 00:02:41,640
+We can also export those results.
+
+37
+00:02:41,640 --> 00:02:44,440
+We can export and import the templates.
+
+38
+00:02:45,320 --> 00:02:50,440
+So the workflows can be modified either through CSV or directly in the front end.
+
+39
+00:02:50,440 --> 00:02:55,080
+And of course, all of that I've described can be started as a brand new project.
+
+40
+00:02:56,200 --> 00:03:05,880
+One important last thing to note is that if we are not happy with any of this, we can absolutely clear all output, which will essentially go back to the original state.
+
+41
+00:03:05,880 --> 00:03:08,240
+It will delete all the chunks, all the embeddings.
+
+42
+00:03:08,240 --> 00:03:11,560
+It will also delete the search index and the knowledge agent behind the scenes.
+
+43
+00:03:12,600 --> 00:03:15,400
+If you find any issues with the application, you can...
+
+44
+00:03:15,960 --> 00:03:19,960
+click Report Issue, which will take you to our Create New Issue page.
+
+45
+00:03:20,280 --> 00:03:30,520
+If you find that you need more information, you can click on Docs, which will take you to our Readme page, which should help you with any questions you might have.
+
+46
+00:03:30,760 --> 00:03:31,960
+Hopefully, this was useful.
+
+47
+00:03:32,040 --> 00:03:32,760
+Thanks for watching.
+

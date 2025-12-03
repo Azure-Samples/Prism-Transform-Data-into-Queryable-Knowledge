@@ -120,19 +120,34 @@ Provide a JSON response with this structure:
 Be thorough and add value through semantic understanding and context."""
 
 
-# Initialize Azure OpenAI Client
-client = AzureOpenAIChatClient(
-    api_key=AZURE_OPENAI_API_KEY,
-    endpoint=AZURE_OPENAI_ENDPOINT,
-    deployment_name=AZURE_OPENAI_CHAT_DEPLOYMENT,
-    api_version=AZURE_OPENAI_API_VERSION
-)
+# Lazy initialization for Azure OpenAI Client
+_client = None
+_email_enhancement_agent = None
 
-# Create Email Enhancement Agent
-email_enhancement_agent = client.create_agent(
-    name="Email_Enhancement",
-    instructions=create_email_enhancement_instructions()
-)
+
+def _get_client():
+    """Lazily initialize the Azure OpenAI client."""
+    global _client
+    if _client is None:
+        _client = AzureOpenAIChatClient(
+            api_key=AZURE_OPENAI_API_KEY,
+            endpoint=AZURE_OPENAI_ENDPOINT,
+            deployment_name=AZURE_OPENAI_CHAT_DEPLOYMENT,
+            api_version=AZURE_OPENAI_API_VERSION
+        )
+    return _client
+
+
+def _get_email_enhancement_agent():
+    """Lazily initialize the Email enhancement agent."""
+    global _email_enhancement_agent
+    if _email_enhancement_agent is None:
+        client = _get_client()
+        _email_enhancement_agent = client.create_agent(
+            name="Email_Enhancement",
+            instructions=create_email_enhancement_instructions()
+        )
+    return _email_enhancement_agent
 
 
 async def enhance_email_with_agent(msg_path: Path, base_markdown: str) -> Dict:
@@ -162,7 +177,7 @@ Provide comprehensive semantic analysis and enhanced markdown following the inst
     )
 
     try:
-        result = await email_enhancement_agent.run(message)
+        result = await _get_email_enhancement_agent().run(message)
         response_text = result.text
 
         try:

@@ -114,7 +114,7 @@ def main():
     aoai_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
     aoai_api_key = os.getenv("AZURE_OPENAI_API_KEY")
     aoai_chat_deployment = os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT_NAME")
-    aoai_agent_model = os.getenv("AZURE_OPENAI_AGENT_MODEL_NAME", "gpt-5")
+    aoai_agent_model = os.getenv("AZURE_OPENAI_AGENT_MODEL_NAME", "gpt-4.1")
 
     if not aoai_endpoint or not aoai_chat_deployment or not aoai_api_key:
         logger.error("Azure OpenAI configuration not found in .env")

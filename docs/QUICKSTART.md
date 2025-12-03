@@ -9,7 +9,7 @@ Get Prism running in 5 minutes!
 
 ## 1. Configure Environment
 
-Create a `.env` file in the project root:
+Copy `.env.example` to `.env` and fill in your values:
 
 ```bash
 # Azure OpenAI

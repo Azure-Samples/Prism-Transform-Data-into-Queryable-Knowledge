@@ -3,7 +3,7 @@ Hybrid PDF Extraction: PyMuPDF4LLM (local) + Vision (validation).
 
 This module implements a two-pass extraction approach:
 1. PyMuPDF4LLM for fast, local markdown extraction (free)
-2. GPT-4 Vision for validation/enhancement of pages with images
+2. GPT-4.1 Vision for validation/enhancement of pages with images
 
 Key insight: Vision VALIDATES the extraction rather than extracting from scratch.
 This is more accurate because Vision compares the markdown against the page image.

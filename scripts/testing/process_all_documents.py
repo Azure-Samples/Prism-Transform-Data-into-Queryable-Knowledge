@@ -238,7 +238,7 @@ def generate_analysis_report(all_results: List[Dict]) -> str:
         "",
         f"- **Successful**: {len(successful)} documents",
         f"- **Failed**: {len(failed)} documents",
-        f"- **Success Rate**: {len(successful)/len(all_results)*100:.1f}%",
+        f"- **Success Rate**: {len(successful)/max(len(all_results), 1)*100:.1f}%",
         "",
     ])
 
@@ -402,11 +402,31 @@ def save_extraction_status(status: Dict) -> None:
         json.dump(status, f, indent=2)
 
 
+def get_output_path(file_path: Path) -> Path:
+    """Get the expected output markdown path for a document."""
+    safe_name = file_path.stem.replace(" ", "_")
+    return OUTPUT_DIR / f"{safe_name}_markdown.md"
+
+
 def get_document_status(status: Dict, file_path: Path) -> str:
-    """Get extraction status for a document (completed/failed/pending)."""
+    """
+    Get extraction status for a document (completed/failed/pending).
+
+    Also verifies the output file actually exists - if status says completed
+    but output file is missing, returns 'pending' to trigger re-extraction.
+    """
     rel_path = str(file_path.relative_to(DOCS_DIR))
     doc_info = status.get("documents", {}).get(rel_path, {})
-    return doc_info.get("status", "pending")
+    stored_status = doc_info.get("status", "pending")
+
+    # If status says completed, verify output file actually exists
+    if stored_status == "completed":
+        output_path = get_output_path(file_path)
+        if not output_path.exists():
+            logger.warning(f"Status says completed but output missing: {file_path.name}")
+            return "pending"
+
+    return stored_status
 
 
 def update_document_status(status: Dict, file_path: Path, doc_status: str, **kwargs) -> None:

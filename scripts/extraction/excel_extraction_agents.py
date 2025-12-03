@@ -238,19 +238,34 @@ Provide a JSON response with this structure:
 Be thorough and add value through semantic understanding and context."""
 
 
-# Initialize Azure OpenAI Client
-client = AzureOpenAIChatClient(
-    api_key=AZURE_OPENAI_API_KEY,
-    endpoint=AZURE_OPENAI_ENDPOINT,
-    deployment_name=AZURE_OPENAI_CHAT_DEPLOYMENT,
-    api_version=AZURE_OPENAI_API_VERSION
-)
+# Lazy initialization for Azure OpenAI Client
+_client = None
+_excel_enhancement_agent = None
 
-# Create Excel Enhancement Agent
-excel_enhancement_agent = client.create_agent(
-    name="Excel_Enhancement",
-    instructions=create_excel_enhancement_instructions()
-)
+
+def _get_client():
+    """Lazily initialize the Azure OpenAI client."""
+    global _client
+    if _client is None:
+        _client = AzureOpenAIChatClient(
+            api_key=AZURE_OPENAI_API_KEY,
+            endpoint=AZURE_OPENAI_ENDPOINT,
+            deployment_name=AZURE_OPENAI_CHAT_DEPLOYMENT,
+            api_version=AZURE_OPENAI_API_VERSION
+        )
+    return _client
+
+
+def _get_excel_enhancement_agent():
+    """Lazily initialize the Excel enhancement agent."""
+    global _excel_enhancement_agent
+    if _excel_enhancement_agent is None:
+        client = _get_client()
+        _excel_enhancement_agent = client.create_agent(
+            name="Excel_Enhancement",
+            instructions=create_excel_enhancement_instructions()
+        )
+    return _excel_enhancement_agent
 
 
 async def enhance_excel_with_agent(excel_path: Path, structured_data: Dict, base_markdown: str) -> Dict:
@@ -283,7 +298,7 @@ Provide comprehensive semantic analysis and enhanced markdown following the inst
     )
 
     try:
-        result = await excel_enhancement_agent.run(message)
+        result = await _get_excel_enhancement_agent().run(message)
         response_text = result.text
 
         try:

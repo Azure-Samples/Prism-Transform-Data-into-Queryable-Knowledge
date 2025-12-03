@@ -115,89 +115,17 @@
       </div>
     </div>
 
-    <!-- Edit Questions Modal -->
-    <div
-      v-if="showEditModal"
-      class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50"
-      @click.self="closeEditModal"
-    >
-      <div class="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h3 class="text-lg font-medium text-gray-900">
-            Edit Section {{ currentSectionId }} Questions
-          </h3>
-          <div class="flex gap-3">
-            <button
-              @click="saveQuestions"
-              :disabled="saving"
-              class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
-            >
-              {{ saving ? 'Saving...' : 'Save Changes' }}
-            </button>
-            <button @click="closeEditModal" class="text-gray-400 hover:text-gray-500">
-              <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-        <div class="px-6 py-4 overflow-y-auto max-h-[calc(90vh-120px)]">
-          <div v-if="loadingQuestions" class="text-center py-12">
-            <div class="text-gray-500">Loading questions...</div>
-          </div>
-          <div v-else-if="questionsError" class="text-red-600">
-            {{ questionsError }}
-          </div>
-          <div v-else class="space-y-6">
-            <div
-              v-for="(question, index) in questions"
-              :key="index"
-              class="border border-gray-200 rounded-lg p-4"
-            >
-              <div class="mb-3">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Question Name</label>
-                <input
-                  v-model="question.name"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                />
-              </div>
-              <div class="mb-3">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Search Instructions</label>
-                <textarea
-                  v-model="question.search_instructions"
-                  rows="3"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                ></textarea>
-              </div>
-              <div class="mb-3">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Search Terms</label>
-                <textarea
-                  v-model="question.search_terms"
-                  rows="2"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                ></textarea>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Required Details</label>
-                <textarea
-                  v-model="question.required_details"
-                  rows="3"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                ></textarea>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAppStore } from '../stores/app'
 import { storeToRefs } from 'pinia'
 import api from '../services/api'
+
+const router = useRouter()
 
 const appStore = useAppStore()
 const { selectedProject: storeSelectedProject } = storeToRefs(appStore)
@@ -209,13 +137,8 @@ const runningSection = ref(null)
 const activeTask = ref(null)
 const pollInterval = ref(null)
 
-// Edit questions modal
-const showEditModal = ref(false)
-const currentSectionId = ref(null)
-const questions = ref([])
-const loadingQuestions = ref(false)
-const questionsError = ref(null)
-const saving = ref(false)
+// Edit questions - now redirects to workflow config page
+// Modal removed - use WorkflowConfig.vue instead
 
 const taskProgress = computed(() => {
   if (!activeTask.value || activeTask.value.questions_total === 0) return 0
@@ -297,41 +220,9 @@ const startPolling = (sectionId, taskId) => {
   }, 3000)
 }
 
-const editQuestions = async (sectionId) => {
-  currentSectionId.value = sectionId
-  showEditModal.value = true
-  loadingQuestions.value = true
-  questionsError.value = null
-
-  try {
-    questions.value = await api.getSectionQuestions(sectionId)
-  } catch (err) {
-    console.error('Failed to load questions:', err)
-    questionsError.value = 'Failed to load questions'
-  } finally {
-    loadingQuestions.value = false
-  }
-}
-
-const saveQuestions = async () => {
-  saving.value = true
-  try {
-    await api.updateSectionQuestions(currentSectionId.value, questions.value)
-    closeEditModal()
-    await loadSections()
-  } catch (err) {
-    console.error('Failed to save questions:', err)
-    questionsError.value = 'Failed to save questions'
-  } finally {
-    saving.value = false
-  }
-}
-
-const closeEditModal = () => {
-  showEditModal.value = false
-  currentSectionId.value = null
-  questions.value = []
-  questionsError.value = null
+const editQuestions = (sectionId) => {
+  // Navigate to the workflow config page for editing
+  router.push(`/projects/${storeSelectedProject.value}/workflow`)
 }
 
 const exportQuestions = async (sectionId) => {

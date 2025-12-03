@@ -34,6 +34,9 @@ output/
 input/
 workflows/question_instructions_backup/
 
+# Project output directories (don't bake local extraction state into image)
+projects/*/output/
+
 # Node
 node_modules/
 npm-debug.log

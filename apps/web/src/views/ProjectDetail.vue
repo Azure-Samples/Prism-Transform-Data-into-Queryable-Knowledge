@@ -94,6 +94,15 @@
                     >
                       {{ runningStage === 'process' ? 'Running...' : 'Re-run' }}
                     </button>
+                    <button
+                      v-if="pipelineStatus?.extraction?.is_processed"
+                      @click="confirmRollback('extraction')"
+                      :disabled="rollingBack"
+                      class="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:opacity-50"
+                      title="Undo extraction and all dependent stages"
+                    >
+                      Undo
+                    </button>
                     <span v-else-if="!pipelineStatus?.documents?.has_documents" class="text-gray-400 text-sm">Pending</span>
                   </div>
                 </div>
@@ -141,6 +150,15 @@
                       {{ runningStage === 'chunk' ? 'Running...' : 'Run' }}
                     </button>
                     <span v-if="pipelineStatus?.chunking?.is_chunked" class="text-green-600 text-sm font-medium">Complete</span>
+                    <button
+                      v-if="pipelineStatus?.chunking?.is_chunked"
+                      @click="confirmRollback('chunking')"
+                      :disabled="rollingBack"
+                      class="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:opacity-50"
+                      title="Undo chunking and all dependent stages"
+                    >
+                      Undo
+                    </button>
                     <span v-else-if="!pipelineStatus?.extraction?.is_processed" class="text-gray-400 text-sm">Pending</span>
                   </div>
                 </div>
@@ -185,6 +203,15 @@
                       {{ runningStage === 'embed' ? 'Running...' : 'Run' }}
                     </button>
                     <span v-if="pipelineStatus?.embedding?.is_embedded" class="text-green-600 text-sm font-medium">Complete</span>
+                    <button
+                      v-if="pipelineStatus?.embedding?.is_embedded"
+                      @click="confirmRollback('embedding')"
+                      :disabled="rollingBack"
+                      class="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:opacity-50"
+                      title="Undo embedding and all dependent stages"
+                    >
+                      Undo
+                    </button>
                     <span v-else-if="!pipelineStatus?.chunking?.is_chunked" class="text-gray-400 text-sm">Pending</span>
                   </div>
                 </div>
@@ -219,6 +246,15 @@
                       {{ runningStage === 'index_create' || runningStage === 'index_upload' ? 'Running...' : 'Run' }}
                     </button>
                     <span v-if="pipelineStatus?.index?.is_indexed" class="text-green-600 text-sm font-medium">Indexed</span>
+                    <button
+                      v-if="pipelineStatus?.index?.is_indexed"
+                      @click="confirmRollback('index')"
+                      :disabled="rollingBack"
+                      class="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:opacity-50"
+                      title="Delete search index and knowledge agent"
+                    >
+                      Undo
+                    </button>
                     <span v-else-if="!pipelineStatus?.embedding?.is_embedded" class="text-gray-400 text-sm">Pending</span>
                   </div>
                 </div>
@@ -253,6 +289,15 @@
                       {{ runningStage === 'source_create' || runningStage === 'agent_create' ? 'Running...' : 'Run' }}
                     </button>
                     <span v-if="pipelineStatus?.agent?.has_agent" class="text-green-600 text-sm font-medium">Active</span>
+                    <button
+                      v-if="pipelineStatus?.agent?.has_agent"
+                      @click="confirmRollback('agent')"
+                      :disabled="rollingBack"
+                      class="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:opacity-50"
+                      title="Delete knowledge agent only"
+                    >
+                      Undo
+                    </button>
                     <span v-else-if="!pipelineStatus?.index?.is_indexed" class="text-gray-400 text-sm">Pending</span>
                   </div>
                 </div>
@@ -263,6 +308,11 @@
           <!-- Pipeline Error -->
           <div v-if="pipelineError" class="mt-4 p-3 bg-red-50 text-red-700 rounded-md text-sm">
             {{ pipelineError }}
+          </div>
+
+          <!-- Pipeline Error -->
+          <div v-if="rollbackError" class="mt-4 p-3 bg-red-50 text-red-700 rounded-md text-sm">
+            {{ rollbackError }}
           </div>
 
           <!-- Quick Actions -->
@@ -281,7 +331,73 @@
               >
                 Query Documents
               </router-link>
+              <button
+                v-if="hasAnyOutput"
+                @click="confirmClearAll"
+                :disabled="rollingBack"
+                class="inline-flex items-center px-4 py-2 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 disabled:opacity-50"
+              >
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                {{ rollingBack ? 'Clearing...' : 'Clear All Output' }}
+              </button>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rollback Confirmation Modal -->
+      <div v-if="showRollbackModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+          <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900">Confirm Rollback</h3>
+          </div>
+          <div class="px-6 py-4">
+            <p class="text-sm text-gray-600 mb-4">
+              {{ rollbackModalMessage }}
+            </p>
+
+            <!-- What will be deleted -->
+            <div v-if="rollbackPreview" class="mb-4">
+              <p class="text-sm font-medium text-gray-700 mb-2">This will delete:</p>
+              <ul class="text-sm text-gray-600 list-disc list-inside space-y-1">
+                <li v-for="stage in rollbackPreview.stages" :key="stage">
+                  {{ formatStageName(stage) }}
+                  <span v-if="rollbackPreview.local_files[stage + '_results'] || rollbackPreview.local_files[stage + '_documents']" class="text-gray-400">
+                    ({{ rollbackPreview.local_files[stage + '_results'] || rollbackPreview.local_files[stage + '_documents'] || rollbackPreview.local_files['extraction_results'] || rollbackPreview.local_files['chunked_documents'] || rollbackPreview.local_files['embedded_documents'] }} files)
+                  </span>
+                </li>
+              </ul>
+              <div v-if="rollbackPreview.azure_resources?.length > 0" class="mt-2">
+                <p class="text-sm font-medium text-gray-700 mb-1">Azure resources:</p>
+                <ul class="text-sm text-gray-600 list-disc list-inside">
+                  <li v-for="resource in rollbackPreview.azure_resources" :key="resource">{{ resource }}</li>
+                </ul>
+              </div>
+              <div v-if="rollbackPreview.warnings?.length > 0" class="mt-3 p-2 bg-yellow-50 rounded">
+                <p v-for="warning in rollbackPreview.warnings" :key="warning" class="text-xs text-yellow-700">
+                  {{ warning }}
+                </p>
+              </div>
+            </div>
+
+            <p class="text-sm text-red-600 font-medium">This action cannot be undone.</p>
+          </div>
+          <div class="px-6 py-4 bg-gray-50 flex justify-end gap-3 rounded-b-lg">
+            <button
+              @click="closeRollbackModal"
+              class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              @click="executeRollback"
+              :disabled="rollingBack"
+              class="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 disabled:opacity-50"
+            >
+              {{ rollingBack ? 'Rolling back...' : 'Confirm Rollback' }}
+            </button>
           </div>
         </div>
       </div>
@@ -366,6 +482,23 @@ const uploadError = ref('')
 const runningStage = ref(null)
 const pipelineError = ref('')
 const taskProgress = ref({ current: 0, total: 0, percent: 0, message: '' })
+
+// Rollback state
+const rollingBack = ref(false)
+const rollbackError = ref('')
+const showRollbackModal = ref(false)
+const rollbackStageToConfirm = ref(null)
+const rollbackPreview = ref(null)
+const rollbackModalMessage = ref('')
+
+// Computed property to check if there's any output
+const hasAnyOutput = computed(() => {
+  return pipelineStatus.value?.extraction?.is_processed ||
+         pipelineStatus.value?.chunking?.is_chunked ||
+         pipelineStatus.value?.embedding?.is_embedded ||
+         pipelineStatus.value?.index?.is_indexed ||
+         pipelineStatus.value?.agent?.has_agent
+})
 
 onMounted(async () => {
   appStore.setSelectedProject(projectId.value)
@@ -525,6 +658,90 @@ const runAgentPipeline = async () => {
     console.error('Agent pipeline failed:', error)
   } finally {
     runningStage.value = null
+  }
+}
+
+// Rollback functions
+const formatStageName = (stage) => {
+  const names = {
+    extraction: 'Extraction Results',
+    chunking: 'Chunked Documents',
+    embedding: 'Embedded Documents',
+    index: 'Search Index',
+    source: 'Knowledge Source',
+    agent: 'Knowledge Agent'
+  }
+  return names[stage] || stage
+}
+
+const confirmRollback = async (stage) => {
+  rollbackStageToConfirm.value = stage
+  rollbackError.value = ''
+
+  // Set appropriate message based on stage
+  const stageMessages = {
+    extraction: 'This will delete all extraction results and all dependent data (chunks, embeddings, index, agent).',
+    chunking: 'This will delete all chunked documents and all dependent data (embeddings, index, agent).',
+    embedding: 'This will delete all embeddings and all dependent data (index, agent).',
+    index: 'This will delete the Azure AI Search index, knowledge source, and agent.',
+    source: 'This will delete the knowledge source and agent.',
+    agent: 'This will delete the knowledge agent only.'
+  }
+  rollbackModalMessage.value = stageMessages[stage] || `This will roll back the ${stage} stage.`
+
+  // Fetch preview
+  try {
+    rollbackPreview.value = await api.previewRollback(projectId.value, stage)
+  } catch (error) {
+    console.error('Failed to get rollback preview:', error)
+    rollbackPreview.value = null
+  }
+
+  showRollbackModal.value = true
+}
+
+const confirmClearAll = async () => {
+  rollbackStageToConfirm.value = 'extraction'
+  rollbackModalMessage.value = 'This will clear ALL output including extraction results, chunks, embeddings, and delete all Azure resources (index, source, agent). Your original documents will NOT be deleted.'
+
+  // Fetch preview
+  try {
+    rollbackPreview.value = await api.previewRollback(projectId.value, 'extraction')
+  } catch (error) {
+    console.error('Failed to get rollback preview:', error)
+    rollbackPreview.value = null
+  }
+
+  showRollbackModal.value = true
+}
+
+const closeRollbackModal = () => {
+  showRollbackModal.value = false
+  rollbackStageToConfirm.value = null
+  rollbackPreview.value = null
+  rollbackModalMessage.value = ''
+}
+
+const executeRollback = async () => {
+  if (!rollbackStageToConfirm.value) return
+
+  rollingBack.value = true
+  rollbackError.value = ''
+
+  try {
+    const result = await api.rollbackStage(projectId.value, rollbackStageToConfirm.value)
+
+    if (result.success) {
+      closeRollbackModal()
+      await loadStatus()
+    } else {
+      rollbackError.value = result.errors?.join(', ') || result.message || 'Rollback failed'
+    }
+  } catch (error) {
+    rollbackError.value = error.response?.data?.detail || 'Failed to execute rollback'
+    console.error('Rollback failed:', error)
+  } finally {
+    rollingBack.value = false
   }
 }
 </script>

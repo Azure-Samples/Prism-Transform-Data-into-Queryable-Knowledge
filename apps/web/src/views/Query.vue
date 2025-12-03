@@ -17,7 +17,7 @@
                   v-model="query"
                   rows="3"
                   class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                  placeholder="e.g., What are the SCADA system requirements?"
+                  placeholder="e.g., What can you tell me about our security situation?"
                 ></textarea>
               </div>
             </div>

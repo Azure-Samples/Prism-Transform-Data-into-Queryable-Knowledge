@@ -223,6 +223,27 @@ export const getTaskStatus = async (taskId) => {
   return response.data
 }
 
+// Rollback Operations
+export const previewRollback = async (projectId, stage, cascade = true) => {
+  const response = await api.get(`/api/rollback/${projectId}/preview/${stage}?cascade=${cascade}`)
+  return response.data
+}
+
+export const rollbackStage = async (projectId, stage, cascade = true) => {
+  const response = await api.post(`/api/rollback/${projectId}/rollback/${stage}?cascade=${cascade}`)
+  return response.data
+}
+
+export const rollbackToStage = async (projectId, targetStage) => {
+  const response = await api.post(`/api/rollback/${projectId}/rollback-to/${targetStage}`)
+  return response.data
+}
+
+export const clearAllOutput = async (projectId) => {
+  const response = await api.delete(`/api/rollback/${projectId}/clear-all`)
+  return response.data
+}
+
 export default {
   login,
   // Projects
@@ -269,4 +290,9 @@ export default {
   runFullPipeline,
   getProjectTasks,
   getTaskStatus,
+  // Rollback
+  previewRollback,
+  rollbackStage,
+  rollbackToStage,
+  clearAllOutput,
 }

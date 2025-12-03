@@ -1,281 +1,342 @@
-# Prism
+<!--
+---
+name: Prism - Transform Documents into Queryable Knowledge
+description: End-to-end RAG pipeline with hybrid document extraction, Azure AI Search Knowledge Agents, and structured Q&A workflows.
+languages:
+- python
+- typescript
+- bicep
+- azdeveloper
+products:
+- azure-openai
+- azure-cognitive-search
+- azure-container-apps
+- azure
+page_type: sample
+urlFragment: prism-document-intelligence
+---
+-->
 
-Transform unstructured documents into queryable knowledge. Upload files, extract content, and get structured answers.
+# Prism - Transform Documents into Queryable Knowledge
 
-## What It Does
+A production-grade RAG (Retrieval-Augmented Generation) platform that transforms unstructured documents into a searchable knowledge base with natural language querying powered by Azure AI Search Knowledge Agents.
 
-```
-[Upload Files] → [Process] → [Index] → [Query]
-```
+[![Open in GitHub Codespaces](https://img.shields.io/static/v1?style=for-the-badge&label=GitHub+Codespaces&message=Open&color=brightgreen&logo=github)](https://codespaces.new/Azure-Samples/Prism---Transform-Data-into-Queryable-Knowledge?devcontainer_path=.devcontainer%2Fdevcontainer.json)
+[![Open in Dev Containers](https://img.shields.io/static/v1?style=for-the-badge&label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/Azure-Samples/Prism---Transform-Data-into-Queryable-Knowledge)
 
-1. **Upload** any documents (PDFs, Excel, emails, images)
-2. **Process** extracts content using AI vision and text analysis
-3. **Index** creates a searchable knowledge base
-4. **Query** ask questions, get structured answers
+<video src="docs/images/prism.mp4" controls width="100%"></video>
+
+> *3-minute demo: Document extraction, RAG pipeline, and workflow automation*
+
+## Important Security Notice
+
+This template is built to showcase Azure AI services. We strongly advise against using this code in production without implementing additional security features. See [productionizing guide](docs/productionizing.md).
+
+![Prism Extraction Pipeline](docs/images/extraction.png)
+
+## What Makes Prism Different
+
+| Challenge | Prism's Solution |
+|-----------|------------------|
+| **Expensive Vision API calls** | Hybrid extraction: PyMuPDF4LLM extracts text locally (free), Vision AI only validates pages with images/diagrams. **70%+ cost reduction.** |
+| **Poor table extraction** | pymupdf4llm preserves table structure as markdown. openpyxl extracts Excel with formulas and formatting. |
+| **Lost document structure** | Structure-aware chunking respects markdown hierarchy (##, ###). Extracts section titles as metadata. |
+| **Hallucinated answers** | Knowledge Agents with strict grounding instructions. Always cites sources with page numbers. Distinguishes "not found" vs "explicitly excluded." |
+| **Manual Q&A workflows** | Define question templates per project. Run workflows against your knowledge base. Export results to CSV. |
 
 ## Features
 
-- **Multi-format support** - PDFs, Excel, Word, emails (.msg), images
-- **AI-powered extraction** - Vision AI for diagrams, text extraction for documents
-- **Semantic search** - Azure AI Search with vector + hybrid search
-- **Structured workflows** - Define sections and questions, get organized answers
-- **Self-service UI** - Full pipeline accessible through web interface
+### Document Extraction
+
+**PDF Processing (Hybrid Approach)**
+- **PyMuPDF + pymupdf4llm**: Fast, local text/table extraction with header/footer filtering
+- **GPT-4.1 Vision**: Validates and enhances pages containing images, diagrams, or complex layouts
+- **Smart optimization**: Text-only pages skip Vision entirely. Repeated images (logos, headers) auto-filtered.
+- **Custom instructions**: Project-specific extraction prompts via `config.json`
+
+**Excel Processing**
+- **openpyxl**: Extracts all worksheets (including hidden), formulas, merged cells
+- **AI enhancement**: Categorizes document type (BOQ, specifications, calculations)
+- **Metadata extraction**: Equipment types, voltage levels, standards (IEC, IEEE, ANSI)
+
+**Email Processing**
+- **extract-msg**: Reliable .msg parsing with attachment extraction
+- **AI enhancement**: Categorizes email type, extracts action items, deadlines, stakeholders
+- **Attachment handling**: Automatically processes PDF/Excel/DOCX attachments
+
+### RAG Pipeline
+
+```
+Upload → Extract → Deduplicate → Chunk → Embed → Index → Query
+```
+
+| Stage | What It Does |
+|-------|--------------|
+| **Extract** | Hybrid local + AI extraction to structured markdown |
+| **Deduplicate** | SHA256 hashing removes duplicate content |
+| **Chunk** | Structure-aware splitting with token counting (tiktoken) |
+| **Embed** | text-embedding-3-large (1024 dimensions, batch processing) |
+| **Index** | Azure AI Search with vector + keyword hybrid search |
+| **Query** | Knowledge Agent with agentic retrieval and citations |
+
+### Azure AI Search Knowledge Agents
+
+Prism uses [Azure AI Search Knowledge Agents](https://learn.microsoft.com/azure/search/search-knowledge-agent) for intelligent document retrieval:
+
+- **Query planning**: Breaks complex questions into focused subqueries
+- **Parallel search**: Executes multiple searches simultaneously
+- **Answer synthesis**: Generates grounded answers from retrieved chunks
+- **Citation tracking**: Returns source documents with page numbers and relevance scores
+- **Activity logging**: Shows query planning steps for transparency
+
+### Workflow System
+
+Define structured Q&A templates for systematic document analysis:
+
+```json
+{
+  "sections": [
+    {
+      "name": "Technical Specifications",
+      "template": "Answer based on technical documents. Provide specific values with units.",
+      "questions": [
+        { "question": "What is the rated voltage?", "instructions": "Check electrical specs" },
+        { "question": "Operating temperature range?", "instructions": "Check environmental specs" }
+      ]
+    }
+  ]
+}
+```
+
+- Run workflows against your knowledge base
+- Track completion percentage per section
+- Export results to CSV
+- Edit and comment on answers
+
+## Architecture
+
+<!-- TODO: Create architecture diagram -->
+<!-- ![Architecture](docs/images/architecture.png) -->
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                         Document Processing                                   │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌─────────┐    ┌─────────────────────────────────────────┐                 │
+│  │  PDFs   │───▶│  PyMuPDF4LLM (local) + Vision (if needed)│                 │
+│  └─────────┘    └─────────────────────────────────────────┘                 │
+│                                     │                                        │
+│  ┌─────────┐    ┌─────────────────────────────────────────┐                 │
+│  │  Excel  │───▶│  openpyxl + AI Enhancement Agent         │                 │
+│  └─────────┘    └─────────────────────────────────────────┘                 │
+│                                     │                                        │
+│  ┌─────────┐    ┌─────────────────────────────────────────┐                 │
+│  │  Email  │───▶│  extract-msg + AI Enhancement Agent      │                 │
+│  └─────────┘    └─────────────────────────────────────────┘                 │
+│                                     │                                        │
+│                                     ▼                                        │
+│                          ┌──────────────────┐                               │
+│                          │  Structured      │                               │
+│                          │  Markdown        │                               │
+│                          └────────┬─────────┘                               │
+└───────────────────────────────────┼──────────────────────────────────────────┘
+                                    │
+┌───────────────────────────────────┼──────────────────────────────────────────┐
+│                         RAG Pipeline                                         │
+├───────────────────────────────────┼──────────────────────────────────────────┤
+│                                   ▼                                          │
+│  ┌────────────┐   ┌────────────┐   ┌────────────┐   ┌────────────┐          │
+│  │ Deduplicate│──▶│   Chunk    │──▶│   Embed    │──▶│   Index    │          │
+│  │  (SHA256)  │   │ (tiktoken) │   │(3-large)   │   │  (Search)  │          │
+│  └────────────┘   └────────────┘   └────────────┘   └────────────┘          │
+└──────────────────────────────────────────────────────────────────────────────┘
+                                    │
+┌───────────────────────────────────┼──────────────────────────────────────────┐
+│                         Query & Workflows                                    │
+├───────────────────────────────────┼──────────────────────────────────────────┤
+│                                   ▼                                          │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │                    Azure AI Search Knowledge Agent                   │    │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────────┐  │    │
+│  │  │Query Planning│─▶│Parallel Search│─▶│Answer Synthesis + Citations│  │    │
+│  │  └──────────────┘  └──────────────┘  └──────────────────────────┘  │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+│                                   │                                          │
+│                    ┌──────────────┴──────────────┐                          │
+│                    ▼                             ▼                          │
+│            ┌─────────────┐               ┌─────────────┐                    │
+│            │  Ad-hoc     │               │  Workflow   │                    │
+│            │  Queries    │               │  Automation │                    │
+│            └─────────────┘               └─────────────┘                    │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
 
 ## Tech Stack
 
-**Backend:**
-- Python 3.11
-- FastAPI
-- Azure OpenAI GPT-4 (vision & chat)
-- Azure AI Search (vector + hybrid)
+### Local Processing (No API Costs)
 
-**Frontend:**
-- Node.js 20
-- Vue 3 + Vite
-- TailwindCSS
-- Pinia (state management)
+| Library | Purpose |
+|---------|---------|
+| **PyMuPDF + pymupdf4llm** | PDF text/table extraction with layout detection |
+| **openpyxl** | Excel extraction with formula support |
+| **extract-msg** | Outlook .msg email parsing |
+| **tiktoken** | Token counting for accurate chunk sizing |
+| **LangChain** | MarkdownHeaderTextSplitter for structure-aware chunking |
 
-**Infrastructure:**
-- Docker + Docker Compose
-- Azure Container Apps ready
+### Azure Services
 
-## Quick Start
+| Service | Purpose |
+|---------|---------|
+| **Azure OpenAI** | GPT-4.1 (extraction, chat), GPT-4.1 Vision, text-embedding-3-large |
+| **Azure AI Search** | Vector + hybrid search, semantic ranking, Knowledge Agents |
+| **Container Apps** | Serverless hosting for backend/frontend |
+| **AI Foundry** | Model deployments and management |
+| **Application Insights** | Monitoring and logging |
 
-### Option 1: Deploy Everything with `azd` (Recommended)
+### Application
 
-The fastest way to get started. Deploys all Azure resources and the app with one command.
+| Component | Technology |
+|-----------|------------|
+| **Backend** | FastAPI (Python 3.11) |
+| **Frontend** | Vue 3 + Vite + TailwindCSS + Pinia |
+| **Infrastructure** | Bicep + Azure Developer CLI |
 
-**Prerequisites:**
-- [Azure Developer CLI (azd)](https://aka.ms/azd-install)
+## Getting Started
+
+### Prerequisites
+
+- Azure subscription with permissions to create resources
+- [Azure Developer CLI](https://aka.ms/azd-install)
 - [Docker](https://docs.docker.com/get-docker/)
-- Azure subscription
 
-**Deploy:**
+### Deploy
+
 ```bash
-# Login to Azure
-azd auth login
+# Clone and deploy
+git clone https://github.com/Azure-Samples/Prism---Transform-Data-into-Queryable-Knowledge.git
+cd Prism---Transform-Data-into-Queryable-Knowledge
 
-# Deploy everything (infrastructure + app)
+azd auth login
 azd up
 ```
 
-You'll be prompted for:
-- **Environment name** (e.g., `dev`, `prod`)
-- **Azure subscription** to use
-- **Azure region** (e.g., `eastus`)
-
 **What gets deployed:**
-- AI Foundry with gpt-4.1 and text-embedding-3-large models
-- Azure AI Search with semantic ranking
+- AI Foundry with GPT-4.1, GPT-4.1 Vision, text-embedding-3-large
+- Azure AI Search with semantic ranking enabled
 - Container Apps (backend + frontend)
-- Container Registry
-- Monitoring (Log Analytics + Application Insights)
+- Container Registry, Log Analytics, Application Insights
 
-After deployment completes:
-- App is live at the Container Apps URL shown in output
-- Auth password is auto-generated - get it with:
-  ```bash
-  az containerapp secret show --name prism-backend --resource-group <your-rg> --secret-name auth-password --query value -o tsv
-  ```
-- `.env` file is auto-generated for local development
-- Or run locally: `docker-compose -f infra/docker/docker-compose.yml --env-file .env up -d`
-
-### Option 2: Use Existing Azure Resources
-
-If you already have Azure OpenAI and AI Search resources.
-
-**Prerequisites:**
-- Docker & Docker Compose
-- Existing Azure OpenAI resource with gpt-4.1 deployment
-- Existing Azure AI Search resource
-
-**Configure:**
-
-Create `.env` file:
+**Get the auth password:**
 ```bash
-# Azure OpenAI / AI Foundry
-AZURE_OPENAI_API_KEY=your-key
-AZURE_OPENAI_ENDPOINT=https://your-resource.cognitiveservices.azure.com
-AZURE_OPENAI_MODEL_NAME=gpt-4.1
-AZURE_OPENAI_API_VERSION=2025-01-01-preview
-AZURE_OPENAI_CHAT_DEPLOYMENT_NAME=gpt-4.1
-AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME=text-embedding-3-large
-
-# Azure AI Search
-AZURE_SEARCH_ENDPOINT=https://your-search.search.windows.net
-AZURE_SEARCH_ADMIN_KEY=your-key
-
-# Authentication
-AUTH_PASSWORD=your-secure-password
+az containerapp secret show --name prism-backend --resource-group <your-rg> --secret-name auth-password --query value -o tsv
 ```
 
-**Run:**
+### Run Locally (after deploying to Azure)
+
+After running `azd up`, generate a local `.env` file from your deployed Container App:
+
+```bash
+# Set your resource group
+RG=<your-rg>
+
+# Get environment variables and secrets
+az containerapp show --name prism-backend --resource-group $RG \
+  --query "properties.template.containers[0].env[?value!=null].{name:name, value:value}" \
+  -o tsv | awk '{print $1"="$2}' > .env
+
+# Append secrets
+echo "AZURE_OPENAI_API_KEY=$(az containerapp secret show --name prism-backend --resource-group $RG --secret-name ai-services-key --query value -o tsv)" >> .env
+echo "AZURE_SEARCH_ADMIN_KEY=$(az containerapp secret show --name prism-backend --resource-group $RG --secret-name search-admin-key --query value -o tsv)" >> .env
+echo "AUTH_PASSWORD=$(az containerapp secret show --name prism-backend --resource-group $RG --secret-name auth-password --query value -o tsv)" >> .env
+```
+
+Then run locally:
 ```bash
 docker-compose -f infra/docker/docker-compose.yml --env-file .env up -d
 ```
 
-**Access:**
-- **App**: http://localhost:3000
-- **API**: http://localhost:8000/docs
+Access at http://localhost:3000
 
-### Using the App
+## Sample Data
 
-1. Login with your auth password
-2. Create a new project
-3. Upload documents
-4. Click "Process" to extract content
-5. Click "Create Index" to make searchable
-6. Query your knowledge base
-
-## Local Development (Optional)
-
-If you need to run without Docker for debugging or development:
-
-**Backend:**
-```bash
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-pip install -r apps/api/requirements-api.txt
-
-# Run API server
-uvicorn apps.api.app.main:app --reload --port 8000
-```
-
-**Frontend:**
-```bash
-cd apps/web
-npm install
-npm run dev
-```
-
-## CLI Commands
-
-For development and scripting, you can run pipeline steps directly:
-
-```bash
-# Process documents for a project
-python main.py process --project myproject
-
-# RAG pipeline steps
-python main.py deduplicate --project myproject
-python main.py chunk --project myproject
-python main.py embed --project myproject
-
-# Index operations
-python main.py index create --project myproject
-python main.py index upload --project myproject
-```
-
-## Testing
-
-Tests use pytest:
-
-```bash
-# Install test dependencies (included in requirements.txt)
-pip install pytest pytest-asyncio
-
-# Run all tests
-pytest
-
-# Run specific test file
-pytest tests/test_workflow_service.py
-
-# Run with verbose output
-pytest -v
-```
+The repo includes sample data in `projects/nist-csf/` (NIST Cybersecurity Framework) so you can try the full pipeline immediately.
 
 ## Project Structure
 
 ```
 prism/
 ├── apps/
-│   ├── api/              # FastAPI backend
-│   └── web/              # Vue frontend
-├── projects/             # User projects (created via UI)
-│   └── {project_name}/
-│       ├── documents/    # Uploaded files
-│       ├── output/       # Processed results
-│       ├── config.json   # Extraction settings
-│       └── workflow_config.json
+│   ├── api/                      # FastAPI backend
+│   │   └── app/
+│   │       ├── api/              # REST endpoints
+│   │       └── services/         # Pipeline, workflow, query services
+│   └── web/                      # Vue 3 frontend
+│       └── src/views/            # Dashboard, Query, Workflows, Results
 ├── scripts/
-│   ├── extraction/       # Document extractors
-│   ├── rag/              # Chunking & embedding
-│   └── search_index/     # Index management
-├── infra/
-│   ├── bicep/            # azd infrastructure (AI Foundry, Search, Container Apps)
-│   ├── azure/            # Legacy deployment scripts
-│   └── docker/           # Docker configuration
-└── tests/                # Test suite
+│   ├── extraction/               # Document extractors
+│   │   ├── pdf_extraction_hybrid.py    # PyMuPDF4LLM + Vision
+│   │   ├── excel_extraction_agents.py  # openpyxl + AI
+│   │   └── email_extraction_agents.py  # extract-msg + AI
+│   ├── rag/                      # RAG pipeline
+│   │   ├── deduplicate_documents.py
+│   │   ├── chunk_documents.py    # Structure-aware chunking
+│   │   └── generate_embeddings.py
+│   └── search_index/             # Azure AI Search
+│       ├── create_search_index.py
+│       ├── create_knowledge_source.py
+│       └── create_knowledge_agent.py
+├── projects/                     # User projects (per-project isolation)
+│   └── {project}/
+│       ├── documents/            # Uploaded files
+│       ├── output/               # Processed results
+│       ├── config.json           # Extraction instructions
+│       └── workflow_config.json  # Q&A templates
+└── infra/
+    ├── bicep/                    # Azure infrastructure
+    └── docker/                   # Local development
 ```
 
-## Configuration Files
+## Cost Estimation
 
-Project configuration is managed through the web UI, not by editing files directly.
+| Service | SKU | Pricing |
+|---------|-----|---------|
+| Azure Container Apps | Consumption | [Pricing](https://azure.microsoft.com/pricing/details/container-apps/) |
+| Azure OpenAI | Standard | [Pricing](https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/) |
+| Azure AI Search | Basic | [Pricing](https://azure.microsoft.com/pricing/details/search/) |
 
-- **`config.json`** - Extraction settings (created when you configure a project in the UI)
-- **`workflow_config.json`** - Sections and questions for structured querying (created via Workflow tab in UI)
+> **Cost optimization**: Hybrid PDF extraction reduces Vision API calls by 70%+ compared to full-vision approaches.
 
-To configure a project:
-1. Open the project in the web UI
-2. Go to Settings to configure extraction instructions
-3. Go to Workflow to define sections and questions
-
-## Deployment
-
-### Azure Container Apps (Recommended)
-
-Use `azd` for the simplest deployment experience:
+## Clean Up
 
 ```bash
-# First time: provision infrastructure + deploy app
-azd up
-
-# Subsequent deploys: just update the app
-azd deploy
-
-# Tear down all resources
 azd down
 ```
 
-### Manual Deployment (Legacy)
+## Documentation
 
-If you prefer manual control or can't use `azd`:
+- [Quick Start](docs/QUICKSTART.md) - Get running in 5 minutes
+- [User Guide](docs/USER_GUIDE.md) - Complete usage instructions
+- [Architecture](docs/architecture.md) - System design details
+- [Data Ingestion](docs/data_ingestion.md) - Supported formats and pipeline
+- [Troubleshooting](docs/troubleshooting.md) - Common issues
+- [Productionizing](docs/productionizing.md) - Production readiness
+- [Local Development](docs/localdev.md) - Development setup
 
-```bash
-cd infra/azure
-./deploy.sh dev    # Deploy to dev
-./deploy.sh prod   # Deploy to production
-```
+## Resources
 
-Note: Manual deployment requires existing Azure OpenAI and AI Search resources.
+- [Azure AI Search Knowledge Agents](https://learn.microsoft.com/azure/search/search-knowledge-agent)
+- [Azure OpenAI Service](https://learn.microsoft.com/azure/cognitive-services/openai/overview)
+- [pymupdf4llm Documentation](https://pymupdf.readthedocs.io/en/latest/pymupdf4llm/)
 
-## API
+## Getting Help
 
-Key endpoints:
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/projects` | GET/POST | List/create projects |
-| `/api/projects/{name}/files` | POST | Upload files |
-| `/api/projects/{name}/process` | POST | Run extraction |
-| `/api/projects/{name}/index` | POST | Create search index |
-| `/api/projects/{name}/agent` | POST | Create knowledge agent |
-| `/api/query` | POST | Query knowledge base |
-
-Full API docs at `/docs` when running.
+- [GitHub Issues](../../issues)
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE)
 
 ## Trademarks
 
-This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft
-trademarks or logos is subject to and must follow
-[Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general).
-Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship.
-Any use of third-party trademarks or logos are subject to those third-party's policies.
+This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft trademarks or logos is subject to and must follow [Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general).
