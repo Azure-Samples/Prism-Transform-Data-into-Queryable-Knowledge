@@ -13,15 +13,39 @@
           <p class="text-sm text-gray-500">Project: {{ projectId }}</p>
         </div>
       </div>
-      <button
-        @click="showAddSectionModal = true"
-        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-      >
-        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-        </svg>
-        Add Section
-      </button>
+      <div class="flex items-center gap-2">
+        <button
+          @click="exportWorkflow"
+          class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+          title="Export workflow as JSON"
+        >
+          <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          Export
+        </button>
+        <label class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 cursor-pointer" title="Import workflow from JSON">
+          <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+          </svg>
+          Import
+          <input
+            type="file"
+            accept=".json"
+            @change="importWorkflow"
+            class="hidden"
+          />
+        </label>
+        <button
+          @click="showAddSectionModal = true"
+          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+        >
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          Add Section
+        </button>
+      </div>
     </div>
 
     <!-- Loading State -->
@@ -113,18 +137,38 @@
           <!-- Questions -->
           <div v-if="section.questions?.length > 0" class="space-y-3">
             <div
-              v-for="(question, idx) in section.questions"
+              v-for="(question, idx) in sortedQuestions(section.questions)"
               :key="question.id"
               class="p-4 bg-gray-50 rounded-lg"
             >
               <div class="flex items-start justify-between">
+                <!-- Order controls -->
+                <div class="flex flex-col items-center mr-3">
+                  <button
+                    @click="moveQuestion(section, question, 'up')"
+                    :disabled="idx === 0"
+                    class="p-1 text-gray-400 hover:text-indigo-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Move up"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                    </svg>
+                  </button>
+                  <span class="text-xs font-medium text-white bg-indigo-500 px-2 py-0.5 rounded my-1">{{ idx + 1 }}</span>
+                  <button
+                    @click="moveQuestion(section, question, 'down')"
+                    :disabled="idx === sortedQuestions(section.questions).length - 1"
+                    class="p-1 text-gray-400 hover:text-indigo-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Move down"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                </div>
                 <div class="flex-1">
-                  <div class="flex items-center gap-2 mb-2">
-                    <span class="text-xs font-medium text-gray-500 bg-gray-200 px-2 py-0.5 rounded">Q{{ idx + 1 }}</span>
-                    <span class="text-xs text-gray-400">{{ question.id }}</span>
-                  </div>
-                  <p class="text-sm text-gray-900">{{ question.question }}</p>
-                  <p v-if="question.instructions" class="mt-1 text-xs text-gray-500 italic">{{ question.instructions }}</p>
+                  <p class="text-sm text-gray-900 font-medium">{{ question.question }}</p>
+                  <p v-if="question.instructions" class="mt-1 text-xs text-gray-500 italic line-clamp-2">{{ question.instructions }}</p>
                 </div>
                 <div class="flex items-center gap-1 ml-4">
                   <button
@@ -174,7 +218,7 @@
                   required
                   :disabled="!!editingSectionId"
                   pattern="[a-zA-Z0-9_-]+"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white text-gray-900 disabled:bg-gray-100 disabled:text-gray-500"
                   placeholder="section-1"
                 />
               </div>
@@ -184,7 +228,7 @@
                   v-model="sectionForm.name"
                   type="text"
                   required
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white text-gray-900"
                   placeholder="General Requirements"
                 />
               </div>
@@ -193,7 +237,7 @@
                 <textarea
                   v-model="sectionForm.template"
                   rows="6"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white text-gray-900"
                   placeholder="You are an assistant helping answer questions about documents..."
                 ></textarea>
               </div>
@@ -233,24 +277,12 @@
           <form @submit.prevent="saveQuestion">
             <div class="space-y-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Question ID</label>
-                <input
-                  v-model="questionForm.id"
-                  type="text"
-                  required
-                  :disabled="!!editingQuestionId"
-                  pattern="[a-zA-Z0-9_-]+"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100"
-                  placeholder="q1"
-                />
-              </div>
-              <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Question</label>
                 <textarea
                   v-model="questionForm.question"
                   rows="3"
                   required
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white text-gray-900"
                   placeholder="What is the required voltage rating?"
                 ></textarea>
               </div>
@@ -259,7 +291,7 @@
                 <textarea
                   v-model="questionForm.instructions"
                   rows="3"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white text-gray-900"
                   placeholder="Look for specifications in the technical requirements section..."
                 ></textarea>
               </div>
@@ -344,7 +376,7 @@ const savingSection = ref(false)
 const showQuestionModal = ref(false)
 const editingQuestionId = ref(null)
 const editingSectionForQuestion = ref(null)
-const questionForm = reactive({ id: '', question: '', instructions: '' })
+const questionForm = reactive({ question: '', instructions: '' })
 const questionError = ref('')
 const savingQuestion = ref(false)
 
@@ -408,6 +440,12 @@ const toggleSection = (sectionId) => {
   expandedSections[sectionId] = !expandedSections[sectionId]
 }
 
+// Sort questions by order
+const sortedQuestions = (questions) => {
+  if (!questions) return []
+  return [...questions].sort((a, b) => (a.order || 999) - (b.order || 999))
+}
+
 // Section CRUD
 const editSection = (section) => {
   editingSectionId.value = section.id
@@ -461,7 +499,6 @@ const confirmDeleteSection = (section) => {
 const addQuestion = (section) => {
   editingSectionForQuestion.value = section
   editingQuestionId.value = null
-  questionForm.id = ''
   questionForm.question = ''
   questionForm.instructions = ''
   questionError.value = ''
@@ -471,7 +508,6 @@ const addQuestion = (section) => {
 const editQuestion = (section, question) => {
   editingSectionForQuestion.value = section
   editingQuestionId.value = question.id
-  questionForm.id = question.id
   questionForm.question = question.question
   questionForm.instructions = question.instructions || ''
   questionError.value = ''
@@ -490,13 +526,20 @@ const saveQuestion = async () => {
   try {
     const sectionId = editingSectionForQuestion.value.id
     if (editingQuestionId.value) {
+      // Update existing question (don't change order)
       await api.updateQuestion(projectId.value, sectionId, editingQuestionId.value, {
         question: questionForm.question,
         instructions: questionForm.instructions
       })
     } else {
+      // Create new question - add at end
+      const section = editingSectionForQuestion.value
+      const maxOrder = section.questions?.reduce((max, q) => Math.max(max, q.order || 0), 0) || 0
+      const newOrder = maxOrder + 1
+      const questionId = `q${Date.now()}`  // Use timestamp for unique ID
       await api.createQuestion(projectId.value, sectionId, {
-        id: questionForm.id,
+        id: questionId,
+        order: newOrder,
         question: questionForm.question,
         instructions: questionForm.instructions
       })
@@ -511,12 +554,48 @@ const saveQuestion = async () => {
 }
 
 const confirmDeleteQuestion = (section, question) => {
-  deleteMessage.value = `Are you sure you want to delete question "${question.id}"?`
+  deleteMessage.value = `Are you sure you want to delete question "${question.question}"?`
   deleteCallback.value = async () => {
     await api.deleteQuestion(projectId.value, section.id, question.id)
     await loadSections()
   }
   showDeleteModal.value = true
+}
+
+// Move question up or down
+const moveQuestion = async (section, question, direction) => {
+  const sorted = sortedQuestions(section.questions)
+  const currentIndex = sorted.findIndex(q => q.id === question.id)
+
+  if (direction === 'up' && currentIndex > 0) {
+    // Swap with previous question
+    const prevQuestion = sorted[currentIndex - 1]
+    const currentOrder = question.order || currentIndex + 1
+    const prevOrder = prevQuestion.order || currentIndex
+
+    // Update both questions with swapped orders
+    try {
+      await api.updateQuestion(projectId.value, section.id, question.id, { order: prevOrder })
+      await api.updateQuestion(projectId.value, section.id, prevQuestion.id, { order: currentOrder })
+      await loadSections()
+    } catch (error) {
+      console.error('Failed to move question:', error)
+    }
+  } else if (direction === 'down' && currentIndex < sorted.length - 1) {
+    // Swap with next question
+    const nextQuestion = sorted[currentIndex + 1]
+    const currentOrder = question.order || currentIndex + 1
+    const nextOrder = nextQuestion.order || currentIndex + 2
+
+    // Update both questions with swapped orders
+    try {
+      await api.updateQuestion(projectId.value, section.id, question.id, { order: nextOrder })
+      await api.updateQuestion(projectId.value, section.id, nextQuestion.id, { order: currentOrder })
+      await loadSections()
+    } catch (error) {
+      console.error('Failed to move question:', error)
+    }
+  }
 }
 
 // Execute delete
@@ -531,6 +610,60 @@ const executeDelete = async () => {
   } finally {
     deleting.value = false
     deleteCallback.value = null
+  }
+}
+
+// Export workflow as JSON
+const exportWorkflow = async () => {
+  try {
+    const workflow = await api.exportWorkflow(projectId.value)
+    const blob = new Blob([JSON.stringify(workflow, null, 2)], { type: 'application/json' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${projectId.value}_workflow.json`
+    document.body.appendChild(a)
+    a.click()
+    window.URL.revokeObjectURL(url)
+    document.body.removeChild(a)
+  } catch (error) {
+    console.error('Failed to export workflow:', error)
+    alert(`Failed to export workflow: ${error.response?.data?.detail || error.message}`)
+  }
+}
+
+// Import workflow from JSON file
+const importWorkflow = async (event) => {
+  const file = event.target.files?.[0]
+  if (!file) return
+
+  try {
+    const text = await file.text()
+    const workflow = JSON.parse(text)
+
+    // Confirm import (will replace existing workflow)
+    const sectionCount = workflow.sections?.length || 0
+    const questionCount = workflow.sections?.reduce((sum, s) => sum + (s.questions?.length || 0), 0) || 0
+
+    if (!confirm(`Import workflow with ${sectionCount} sections and ${questionCount} questions? This will replace the current workflow configuration.`)) {
+      return
+    }
+
+    await api.importWorkflow(projectId.value, workflow)
+    await loadSections()
+    alert('Workflow imported successfully!')
+  } catch (error) {
+    console.error('Failed to import workflow:', error)
+    if (error instanceof SyntaxError) {
+      alert('Invalid JSON file. Please select a valid workflow JSON file.')
+    } else {
+      alert(`Failed to import workflow: ${error.response?.data?.detail || error.message}`)
+    }
+  } finally {
+    // Reset file input
+    if (event.target) {
+      event.target.value = ''
+    }
   }
 }
 </script>

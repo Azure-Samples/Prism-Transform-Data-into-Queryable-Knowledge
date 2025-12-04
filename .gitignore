@@ -63,3 +63,5 @@ projects/*/documents/**
 projects/*/output/**
 !projects/*/documents/.gitkeep
 !projects/*/output/.gitkeep
+projects/rfp1/*
+projects/rfp3/*

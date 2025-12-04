@@ -106,6 +106,17 @@ export const deleteQuestion = async (projectId, sectionId, questionId) => {
   return response.data
 }
 
+// Workflow Export/Import
+export const exportWorkflow = async (projectId) => {
+  const response = await api.get(`/api/projects/${projectId}/workflow/export`)
+  return response.data
+}
+
+export const importWorkflow = async (projectId, workflowData) => {
+  const response = await api.post(`/api/projects/${projectId}/workflow/import`, workflowData)
+  return response.data
+}
+
 // Workflows
 export const getWorkflows = async (projectId = null) => {
   const params = projectId ? { project_id: projectId } : {}
@@ -152,17 +163,19 @@ export const updateSectionQuestions = async (sectionId, questions) => {
   return response.data
 }
 
-export const exportSectionQuestions = async (sectionId) => {
+export const exportSectionQuestions = async (projectId, sectionId) => {
   const response = await api.get(`/api/workflows/${sectionId}/questions/export`, {
+    params: { project_id: projectId },
     responseType: 'blob',
   })
   return response.data
 }
 
-export const importSectionQuestions = async (sectionId, file) => {
+export const importSectionQuestions = async (projectId, sectionId, file) => {
   const formData = new FormData()
   formData.append('file', file)
   const response = await api.post(`/api/workflows/${sectionId}/questions/import`, formData, {
+    params: { project_id: projectId },
     headers: {
       'Content-Type': 'multipart/form-data',
     },
@@ -267,6 +280,9 @@ export default {
   createQuestion,
   updateQuestion,
   deleteQuestion,
+  // Workflow Export/Import
+  exportWorkflow,
+  importWorkflow,
   // Workflows
   getWorkflows,
   runWorkflow,

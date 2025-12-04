@@ -321,3 +321,62 @@ async def delete_question(project_id: str, section_id: str, question_id: str):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== Workflow Export/Import ====================
+
+@router.get("/{project_id}/workflow/export")
+async def export_workflow(project_id: str):
+    """Export the entire workflow configuration as JSON"""
+    try:
+        if not project_service.project_exists(project_id):
+            raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found")
+
+        workflow = project_service.get_workflow_config(project_id)
+        if not workflow:
+            raise HTTPException(status_code=404, detail=f"No workflow configuration found for project '{project_id}'")
+
+        return workflow
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{project_id}/workflow/import")
+async def import_workflow(project_id: str, workflow: Dict[str, Any]):
+    """Import a workflow configuration from JSON"""
+    try:
+        if not project_service.project_exists(project_id):
+            raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found")
+
+        # Validate the workflow structure
+        if "sections" not in workflow:
+            raise HTTPException(status_code=400, detail="Invalid workflow format: 'sections' key is required")
+
+        if not isinstance(workflow["sections"], list):
+            raise HTTPException(status_code=400, detail="Invalid workflow format: 'sections' must be a list")
+
+        # Validate each section
+        for section in workflow["sections"]:
+            if not isinstance(section, dict):
+                raise HTTPException(status_code=400, detail="Invalid workflow format: each section must be an object")
+            if "id" not in section or "name" not in section:
+                raise HTTPException(status_code=400, detail="Invalid workflow format: each section must have 'id' and 'name'")
+
+        success = project_service.save_workflow_config(project_id, workflow)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to save workflow configuration")
+
+        section_count = len(workflow["sections"])
+        question_count = sum(len(s.get("questions", [])) for s in workflow["sections"])
+
+        return {
+            "message": f"Workflow imported successfully",
+            "sections_imported": section_count,
+            "questions_imported": question_count
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

@@ -1,7 +1,7 @@
 """
 Workflows API - Manage and execute workflow sections
 """
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, UploadFile, File
 from fastapi.responses import FileResponse
 from typing import List, Optional
 from apps.api.app.models import (
@@ -140,18 +140,36 @@ async def update_section_questions(section_id: str, questions: List[dict]):
 
 
 @router.get("/{section_id}/questions/export")
-async def export_section_questions(section_id: str):
+async def export_section_questions(section_id: str, project_id: str = Query(..., description="Project ID")):
     """Export questions for a section as CSV file"""
     try:
-        csv_path = workflow_service.get_questions_csv_path(section_id)
+        import io
+        import csv as csv_module
+        from fastapi.responses import StreamingResponse
 
-        if not os.path.exists(csv_path):
-            raise HTTPException(status_code=404, detail=f"Questions file not found for section {section_id}")
+        # Get questions from the workflow config
+        questions = workflow_service.get_section_questions(project_id, section_id)
+        if questions is None:
+            raise HTTPException(status_code=404, detail=f"Section '{section_id}' not found in project")
 
-        return FileResponse(
-            csv_path,
+        # Create CSV in memory
+        output = io.StringIO()
+        writer = csv_module.DictWriter(output, fieldnames=['id', 'order', 'question', 'instructions'])
+        writer.writeheader()
+
+        for q in questions:
+            writer.writerow({
+                'id': q.get('id', ''),
+                'order': q.get('order', ''),
+                'question': q.get('question', ''),
+                'instructions': q.get('instructions', '')
+            })
+
+        output.seek(0)
+        return StreamingResponse(
+            iter([output.getvalue()]),
             media_type='text/csv',
-            filename=f'{section_id}_questions.csv'
+            headers={'Content-Disposition': f'attachment; filename="{section_id}_questions.csv"'}
         )
     except HTTPException:
         raise
@@ -160,33 +178,42 @@ async def export_section_questions(section_id: str):
 
 
 @router.post("/{section_id}/questions/import")
-async def import_section_questions(section_id: str, file: bytes):
+async def import_section_questions(
+    section_id: str,
+    project_id: str = Query(..., description="Project ID"),
+    file: UploadFile = File(...)
+):
     """Import questions for a section from CSV file"""
     try:
-        # Save the uploaded file
         import io
         import csv as csv_module
 
-        # Parse CSV from bytes
-        csv_content = file.decode('utf-8')
+        # Read and parse CSV from uploaded file
+        content = await file.read()
+        csv_content = content.decode('utf-8')
         csv_file = io.StringIO(csv_content)
         reader = csv_module.DictReader(csv_file)
 
         questions = []
         for row in reader:
-            questions.append({
+            question = {
                 'id': row.get('id', ''),
-                'name': row.get('name', ''),
-                'search_instructions': row.get('search_instructions', ''),
-                'search_terms': row.get('search_terms', ''),
-                'required_details': row.get('required_details', '')
-            })
+                'question': row.get('question', ''),
+                'instructions': row.get('instructions', '')
+            }
+            # Handle order field if present
+            if row.get('order'):
+                try:
+                    question['order'] = int(row.get('order'))
+                except ValueError:
+                    pass
+            questions.append(question)
 
         if not questions:
             raise HTTPException(status_code=400, detail="No valid questions found in CSV file")
 
-        # Update questions
-        workflow_service.update_section_questions(section_id, questions)
+        # Update questions in the workflow config
+        workflow_service.update_section_questions(project_id, section_id, questions)
 
         return {"status": "success", "message": f"Imported {len(questions)} questions for section {section_id}"}
     except HTTPException:

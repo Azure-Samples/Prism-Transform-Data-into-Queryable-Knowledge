@@ -7,9 +7,9 @@
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  color-scheme: light only;
+  color: #1f2937;
+  background-color: #f9fafb;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -24,4 +24,20 @@ body {
 
 #app {
   min-height: 100vh;
+}
+
+/* Force light mode on all form inputs */
+input,
+textarea,
+select {
+  background-color: #ffffff !important;
+  color: #1f2937 !important;
+  color-scheme: light only;
+}
+
+input:disabled,
+textarea:disabled,
+select:disabled {
+  background-color: #f3f4f6 !important;
+  color: #6b7280 !important;
 }

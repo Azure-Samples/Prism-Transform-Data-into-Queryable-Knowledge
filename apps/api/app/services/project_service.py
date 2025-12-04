@@ -477,3 +477,21 @@ class ProjectService:
                 return True
 
         return False
+
+    # ==================== Workflow Export/Import ====================
+
+    def get_workflow_config(self, project_name: str) -> Optional[Dict]:
+        """Get the complete workflow configuration for export"""
+        config_path = self._get_workflow_config_path(project_name)
+        if not os.path.exists(config_path):
+            return None
+        return self._load_workflow_config(project_name)
+
+    def save_workflow_config(self, project_name: str, config: Dict) -> bool:
+        """Save a complete workflow configuration (for import)"""
+        try:
+            self._save_workflow_config(project_name, config)
+            return True
+        except Exception as e:
+            print(f"Error saving workflow config: {e}")
+            return False

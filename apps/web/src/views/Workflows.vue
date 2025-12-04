@@ -227,11 +227,11 @@ const editQuestions = (sectionId) => {
 
 const exportQuestions = async (sectionId) => {
   try {
-    const blob = await api.exportSectionQuestions(sectionId)
+    const blob = await api.exportSectionQuestions(storeSelectedProject.value, sectionId)
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `section${sectionId}_questions.csv`
+    a.download = `${storeSelectedProject.value}_section${sectionId}_questions.csv`
     document.body.appendChild(a)
     a.click()
     window.URL.revokeObjectURL(url)
@@ -247,7 +247,7 @@ const importQuestions = async (event, sectionId) => {
   if (!file) return
 
   try {
-    await api.importSectionQuestions(sectionId, file)
+    await api.importSectionQuestions(storeSelectedProject.value, sectionId, file)
 
     // Reload sections to show updated counts
     await loadSections()

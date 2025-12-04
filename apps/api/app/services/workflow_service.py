@@ -400,11 +400,13 @@ class WorkflowService:
             if section.get('id') == section_id:
                 for i, q in enumerate(section.get('questions', [])):
                     if q.get('id') == question_id:
-                        question_data['id'] = question_id
-                        section['questions'][i] = question_data
+                        # Merge with existing question data to preserve fields not being updated
+                        updated_question = {**q, **question_data}
+                        updated_question['id'] = question_id  # Ensure ID is preserved
+                        section['questions'][i] = updated_question
 
                         if self._save_workflow_config(project_id, config):
-                            return question_data
+                            return updated_question
                         return None
 
         return None
@@ -420,6 +422,17 @@ class WorkflowService:
 
                 if len(section['questions']) < original_len:
                     return self._save_workflow_config(project_id, config)
+
+        return False
+
+    def update_section_questions(self, project_id: str, section_id: str, questions: List[Dict[str, Any]]) -> bool:
+        """Replace all questions in a section with new questions (for CSV import)"""
+        config = self._get_workflow_config(project_id)
+
+        for section in config.get('sections', []):
+            if section.get('id') == section_id:
+                section['questions'] = questions
+                return self._save_workflow_config(project_id, config)
 
         return False
 
