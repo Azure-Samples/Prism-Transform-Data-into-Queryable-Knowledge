@@ -290,6 +290,7 @@ class WorkflowService:
                     answered_questions += 1
 
                 section_data['questions'].append({
+                    'question_id': q_id,
                     'question_name': q_text,
                     'answer': answer if answer else None,
                     'reference': reference if reference else None,

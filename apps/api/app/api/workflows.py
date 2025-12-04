@@ -93,21 +93,45 @@ async def get_results(project_id: str):
 async def export_results(project_id: str):
     """Export results as CSV file"""
     try:
+        import io
+        import csv as csv_module
+        from fastapi.responses import StreamingResponse
+
         if not project_service.project_exists(project_id):
             raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found")
 
-        results_path = project_service.get_results_csv_path(project_id)
-
-        if not os.path.exists(results_path):
+        # Get results from JSON
+        results = workflow_service.get_project_results(project_id)
+        if not results:
             raise HTTPException(
                 status_code=404,
-                detail=f"No results file found for project '{project_id}'"
+                detail=f"No results found for project '{project_id}'. Run workflows first."
             )
 
-        return FileResponse(
-            results_path,
+        # Create CSV in memory
+        output = io.StringIO()
+        writer = csv_module.writer(output)
+
+        # Write header
+        writer.writerow(['Section ID', 'Section Name', 'Question', 'Answer', 'Reference', 'Comments'])
+
+        # Write data rows
+        for section in results.sections:
+            for question in section.get('questions', []):
+                writer.writerow([
+                    section.get('section_id', ''),
+                    section.get('section_name', ''),
+                    question.get('question_name', ''),
+                    question.get('answer', ''),
+                    question.get('reference', ''),
+                    question.get('comments', '')
+                ])
+
+        output.seek(0)
+        return StreamingResponse(
+            iter([output.getvalue()]),
             media_type='text/csv',
-            filename=f'{project_id}_results.csv'
+            headers={'Content-Disposition': f'attachment; filename="{project_id}_results.csv"'}
         )
     except HTTPException:
         raise

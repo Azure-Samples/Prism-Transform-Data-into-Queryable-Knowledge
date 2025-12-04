@@ -13,7 +13,7 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from apps.api.app.api import projects, workflows, query, indexes, auth, pipeline, rollback
+from apps.api.app.api import projects, workflows, query, indexes, auth, pipeline, rollback, chat
 
 
 @asynccontextmanager
@@ -51,6 +51,7 @@ app.include_router(query.router, prefix="/api/query", tags=["Query"])
 app.include_router(indexes.router, prefix="/api/indexes", tags=["Indexes"])
 app.include_router(pipeline.router, prefix="/api/pipeline", tags=["Pipeline"])
 app.include_router(rollback.router, prefix="/api/rollback", tags=["Rollback"])
+app.include_router(chat.router, prefix="/api/chat", tags=["Chat"])
 
 
 @app.get("/")

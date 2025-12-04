@@ -448,8 +448,13 @@ class ProjectService:
                 questions = section.get('questions', [])
                 for question in questions:
                     if question.get('id') == question_id:
-                        question['question'] = updates.get('question', question.get('question', ''))
-                        question['instructions'] = updates.get('instructions', question.get('instructions', ''))
+                        # Update only provided fields
+                        if 'question' in updates:
+                            question['question'] = updates['question']
+                        if 'instructions' in updates:
+                            question['instructions'] = updates['instructions']
+                        if 'order' in updates:
+                            question['order'] = updates['order']
                         config['sections'] = sections
                         self._save_workflow_config(project_name, config)
                         return question

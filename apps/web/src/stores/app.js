@@ -7,6 +7,11 @@ export const useAppStore = defineStore('app', () => {
   const projects = ref([])
   const activeIndex = ref('')
 
+  // Chat context - the question being discussed (null = general search mode)
+  const chatContext = ref(null)
+  // Chat conversation history
+  const chatHistory = ref([])
+
   const loadProjects = async () => {
     try {
       const data = await api.getProjects()
@@ -31,14 +36,45 @@ export const useAppStore = defineStore('app', () => {
 
   const setSelectedProject = (projectId) => {
     selectedProject.value = projectId
+    // Clear chat when project changes
+    clearChat()
+  }
+
+  // Set chat context for discussing a specific question
+  const setChatContext = (context) => {
+    chatContext.value = context
+    chatHistory.value = []  // Clear history when context changes
+  }
+
+  // Clear chat context (go to general search mode)
+  const clearChatContext = () => {
+    chatContext.value = null
+    chatHistory.value = []
+  }
+
+  // Add a message to chat history
+  const addChatMessage = (role, content) => {
+    chatHistory.value.push({ role, content })
+  }
+
+  // Clear all chat state
+  const clearChat = () => {
+    chatContext.value = null
+    chatHistory.value = []
   }
 
   return {
     selectedProject,
     projects,
     activeIndex,
+    chatContext,
+    chatHistory,
     loadProjects,
     loadActiveIndex,
     setSelectedProject,
+    setChatContext,
+    clearChatContext,
+    addChatMessage,
+    clearChat,
   }
 })

@@ -26,8 +26,9 @@ class SectionRequest(BaseModel):
 
 class QuestionRequest(BaseModel):
     id: Optional[str] = None
-    question: str
-    instructions: Optional[str] = ""
+    order: Optional[int] = None
+    question: Optional[str] = None
+    instructions: Optional[str] = None
 
 
 # ==================== Project CRUD ====================
@@ -269,11 +270,15 @@ async def create_question(project_id: str, section_id: str, request: QuestionReq
         if not project_service.project_exists(project_id):
             raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found")
 
-        question = project_service.create_question(project_id, section_id, {
+        question_data = {
             "id": request.id,
-            "question": request.question,
+            "question": request.question or "",
             "instructions": request.instructions or ""
-        })
+        }
+        if request.order is not None:
+            question_data["order"] = request.order
+
+        question = project_service.create_question(project_id, section_id, question_data)
         if question is None:
             raise HTTPException(status_code=404, detail=f"Section '{section_id}' not found")
         return question
@@ -292,10 +297,16 @@ async def update_question(project_id: str, section_id: str, question_id: str, re
         if not project_service.project_exists(project_id):
             raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found")
 
-        question = project_service.update_question(project_id, section_id, question_id, {
-            "question": request.question,
-            "instructions": request.instructions or ""
-        })
+        # Build update data only with provided fields
+        update_data = {}
+        if request.order is not None:
+            update_data["order"] = request.order
+        if request.question is not None:
+            update_data["question"] = request.question
+        if request.instructions is not None:
+            update_data["instructions"] = request.instructions
+
+        question = project_service.update_question(project_id, section_id, question_id, update_data)
         if question is None:
             raise HTTPException(status_code=404, detail=f"Question '{question_id}' not found in section '{section_id}'")
         return question

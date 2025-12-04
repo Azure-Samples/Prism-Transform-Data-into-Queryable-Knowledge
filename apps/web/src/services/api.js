@@ -257,6 +257,40 @@ export const clearAllOutput = async (projectId) => {
   return response.data
 }
 
+// Chat Operations
+export const sendChatMessage = async (projectId, message, context = null, conversationHistory = []) => {
+  const response = await api.post('/api/chat', {
+    project_id: projectId,
+    message,
+    context,
+    conversation_history: conversationHistory
+  })
+  return response.data
+}
+
+export const updateResultFromChat = async (projectId, sectionId, questionId, updates) => {
+  // Build request body, only including non-empty values
+  const body = {
+    project_id: projectId,
+    section_id: sectionId,
+    question_id: questionId
+  }
+
+  // Only add fields that have values
+  if (updates.answer && updates.answer.trim()) {
+    body.new_answer = updates.answer.trim()
+  }
+  if (updates.reference && updates.reference.trim()) {
+    body.new_reference = updates.reference.trim()
+  }
+  if (updates.comments && updates.comments.trim()) {
+    body.new_comments = updates.comments.trim()
+  }
+
+  const response = await api.put('/api/chat/update-result', body)
+  return response.data
+}
+
 export default {
   login,
   // Projects
@@ -311,4 +345,7 @@ export default {
   rollbackStage,
   rollbackToStage,
   clearAllOutput,
+  // Chat
+  sendChatMessage,
+  updateResultFromChat,
 }

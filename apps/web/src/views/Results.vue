@@ -110,9 +110,21 @@
               class="border-l-4 pl-4"
               :class="question.answer ? 'border-green-400' : 'border-gray-300'"
             >
-              <h4 class="text-sm font-medium text-gray-900 mb-2">
-                {{ question.question_name }}
-              </h4>
+              <div class="flex justify-between items-start">
+                <h4 class="text-sm font-medium text-gray-900 mb-2 flex-1">
+                  {{ question.question_name }}
+                </h4>
+                <button
+                  @click="openChat(section, question)"
+                  class="ml-2 px-2 py-1 text-xs font-medium text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded flex items-center gap-1"
+                  title="Discuss this result"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                  Chat
+                </button>
+              </div>
               <dl class="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-3">
                 <div class="sm:col-span-1">
                   <dt class="text-xs font-medium text-gray-500">Answer</dt>
@@ -153,10 +165,12 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAppStore } from '../stores/app'
 import { storeToRefs } from 'pinia'
 import api from '../services/api'
 
+const router = useRouter()
 const appStore = useAppStore()
 const { selectedProject } = storeToRefs(appStore)
 
@@ -235,5 +249,20 @@ const clearSectionAnswers = async (sectionId) => {
     console.error('Failed to clear answers:', error)
     alert(`Failed to clear answers: ${error.message}`)
   }
+}
+
+const openChat = (section, question) => {
+  // Set chat context with the question details
+  appStore.setChatContext({
+    section_id: section.section_id,
+    question_id: question.question_id,
+    question_text: question.question_name,
+    current_answer: question.answer || '',
+    current_reference: question.reference || '',
+    current_comments: question.comments || ''
+  })
+
+  // Navigate to chat/query page
+  router.push('/query')
 }
 </script>
