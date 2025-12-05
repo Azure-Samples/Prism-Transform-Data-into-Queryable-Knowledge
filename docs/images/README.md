@@ -31,6 +31,7 @@ Screenshot of the Workflows view showing:
 ### 4. `results.png`
 Screenshot of the Results view showing:
 - Answered questions with citations
+- Evaluation scores (relevance, coherence, fluency, groundedness)
 - Export to CSV option
 
 ### 5. `pipeline.png`

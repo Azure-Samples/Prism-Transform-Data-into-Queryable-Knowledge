@@ -150,22 +150,44 @@ After extraction, documents are chunked for optimal retrieval:
 
 ### Chunking Strategy
 
+- **Page-aware splitting**: Documents split by structure first (pages, sheets, email parts)
 - **Chunk size**: ~1000 tokens
-- **Overlap**: 100 tokens between chunks
-- **Boundaries**: Respects section headers and paragraphs
+- **Overlap**: 200 tokens between chunks
+- **Boundaries**: Respects markdown headers within each section
+
+### Contextual Chunk Enrichment
+
+Each chunk is enriched with context for better embedding quality:
+
+```
+Document: Technical Manual
+Section: Safety Requirements > Electrical Standards
+Location: Page 5
+
+[actual chunk content here...]
+```
+
+This context prefix helps the embedding model understand WHERE the content comes from, improving retrieval accuracy.
 
 ### Chunk Metadata
 
 Each chunk includes:
 ```json
 {
-  "id": "doc1_chunk_0",
-  "content": "chunk text...",
-  "source_document": "document1.pdf",
+  "chunk_id": "a1b2c3d4_chunk_000",
+  "content": "original chunk text...",
+  "enriched_content": "Document: ...\nSection: ...\n\noriginal chunk text...",
+  "source_file": "document1.pdf",
   "location": "Page 1",
-  "section": "Introduction"
+  "section_title": "Introduction",
+  "section_hierarchy": {"Header 1": "Chapter 1", "Header 2": "Introduction"}
 }
 ```
+
+The `location` field format varies by document type:
+- **PDFs**: "Page 1", "Page 2", etc.
+- **Excel**: "Sheet: Sales", "Sheet: Data", etc.
+- **Email**: "Email Metadata", "Email Body"
 
 ## Embedding
 
@@ -174,8 +196,9 @@ Chunks are embedded using Azure OpenAI's text-embedding-3-large model:
 ### Embedding Details
 
 - **Model**: text-embedding-3-large
-- **Dimensions**: 3072
-- **Batch processing**: 16 chunks per request
+- **Dimensions**: 1024
+- **Batch processing**: 100 chunks per batch
+- **Input**: Enriched content (includes context prefix for better retrieval)
 
 ### Storage
 
@@ -211,34 +234,27 @@ Azure AI Search index includes:
 - **Hybrid search**: Combined ranking
 - **Semantic ranking**: Re-ranking with AI
 
-## Pipeline Commands
+## Running the Pipeline
 
-### Full Pipeline
+### Via UI (Recommended)
 
-```bash
-# Process all documents
-python main.py process --project myproject
-
-# Deduplicate content
-python main.py deduplicate --project myproject
-
-# Chunk documents
-python main.py chunk --project myproject
-
-# Generate embeddings
-python main.py embed --project myproject
-
-# Create and populate index
-python main.py index create --project myproject
-python main.py index upload --project myproject
-```
+1. Navigate to your project in the web UI
+2. Go to the **Pipeline** view
+3. Click each stage button in order:
+   - **Process** - Extract documents to markdown
+   - **Deduplicate** - Remove duplicate content
+   - **Chunk** - Split into searchable chunks
+   - **Embed** - Generate vector embeddings
+   - **Index Create** - Create Azure AI Search index
+   - **Index Upload** - Upload chunks to search index
+   - **Create Agent** - Create Knowledge Agent for querying
 
 ### Force Re-run
 
-```bash
-# Re-process all documents (ignore status)
-python main.py process --project myproject --force
-```
+Use the **Re-run** button in the Pipeline view to re-process documents that have already been processed. This is useful when:
+- Extraction instructions changed
+- Documents were updated
+- Previous extraction had errors
 
 ## Troubleshooting
 

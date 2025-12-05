@@ -41,6 +41,7 @@ AZURE_OPENAI_ENDPOINT=https://your-resource.cognitiveservices.azure.com
 AZURE_OPENAI_MODEL_NAME=gpt-4.1
 AZURE_OPENAI_API_VERSION=2025-01-01-preview
 AZURE_OPENAI_CHAT_DEPLOYMENT_NAME=gpt-4.1
+AZURE_OPENAI_WORKFLOW_DEPLOYMENT_NAME=gpt-5-chat  # Optional: separate model for workflows
 AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME=text-embedding-3-large
 
 # Azure AI Search

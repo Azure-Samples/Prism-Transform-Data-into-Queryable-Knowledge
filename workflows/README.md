@@ -24,7 +24,7 @@ Results (JSON)
 
 ## Configuration
 
-Workflows are configured per-project in `projects/{name}/workflow_config.json`:
+Workflows are configured per-project in `workflow_config.json` (stored in Azure Blob Storage):
 
 ```json
 {
@@ -55,19 +55,6 @@ Workflows are configured per-project in `projects/{name}/workflow_config.json`:
 4. Click **Run Section**
 5. View results when complete
 
-### Via CLI
-
-```bash
-# Run a specific section
-python main.py run section1 --project myproject
-
-# List available sections
-python main.py run --list --project myproject
-
-# Launch interactive workflow UI
-python main.py workflow --project myproject
-```
-
 ## File Structure
 
 ```
@@ -80,7 +67,7 @@ workflows/
 
 ## Results
 
-Results are saved to `projects/{name}/output/results.json`:
+Results are saved to `output/results.json` in Azure Blob Storage:
 
 ```json
 {

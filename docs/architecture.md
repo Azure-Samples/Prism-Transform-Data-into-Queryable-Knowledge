@@ -106,8 +106,11 @@ Prism uses local libraries first, then AI only when necessary:
 
 - **70%+ cost reduction** vs full-vision approaches
 - Local extraction handles text-heavy pages instantly
-- Vision validates complex pages with images/diagrams
-- Repeated images (logos, headers) auto-filtered to avoid redundant API calls
+- Vision validates pages with actual embedded images only
+- **Smart Vision Triggers**:
+  - Tables with vector drawings (borders, lines) → local extraction only
+  - Pages with actual images (photos, diagrams, charts) → Vision validation
+  - Repeated images (logos, headers appearing on >10 pages) → auto-filtered
 
 ## RAG Pipeline
 
@@ -137,16 +140,25 @@ Prism uses local libraries first, then AI only when necessary:
 - Outputs document inventory for downstream stages
 
 **Chunk**
-- LangChain MarkdownHeaderTextSplitter respects document structure
+- Page-aware chunking: splits by document structure first (pages, sheets, email parts)
+- LangChain MarkdownHeaderTextSplitter respects markdown headers within sections
 - Token counting with tiktoken (matches OpenAI tokenizer)
 - Target: 1000 tokens, Min: 400 tokens, Overlap: 200 tokens
-- Preserves section titles as metadata
+- **Contextual Enrichment**: Each chunk is prefixed with context for better embeddings:
+  ```
+  Document: Technical Manual
+  Section: Safety Requirements > Electrical
+  Location: Page 5
+
+  [chunk content...]
+  ```
 
 **Embed**
 - Azure OpenAI text-embedding-3-large
 - 1024 dimensions
 - Batch processing (100 chunks/batch)
 - Resume capability for interrupted runs
+- Embeddings generated from enriched content (includes context prefix)
 
 **Index**
 - Azure AI Search with hybrid search
@@ -257,13 +269,50 @@ The agent is configured with strict grounding:
 │  ┌─────────────────────────────────────────────────────────────────────┐    │
 │  │                         Results                                      │    │
 │  │  • Answer text                                                      │    │
-│  │  • Source citations with page numbers                               │    │
+│  │  • Source citations with location (page/sheet/section)             │    │
 │  │  • Relevance scores                                                 │    │
 │  │  • Export to CSV                                                    │    │
 │  └─────────────────────────────────────────────────────────────────────┘    │
 │                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
+
+## Answer Evaluation
+
+Prism includes an evaluation system using the Azure AI Evaluation SDK to assess answer quality:
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                         Evaluation System                                     │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  For each answered question, evaluates:                                      │
+│                                                                              │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐              │
+│  │   Relevance     │  │   Coherence     │  │    Fluency      │              │
+│  │                 │  │                 │  │                 │              │
+│  │ Does answer     │  │ Is the answer   │  │ Is language     │              │
+│  │ address the     │  │ logically       │  │ natural and     │              │
+│  │ question?       │  │ consistent?     │  │ readable?       │              │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘              │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │                       Groundedness                                   │    │
+│  │                                                                      │    │
+│  │  Is the answer supported by the retrieved context/citations?        │    │
+│  │  (Only evaluated when context is available)                         │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+│                                                                              │
+│  Output: Score (1-5) + Reason for each metric                               │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Key Features:**
+- No ground truth required - evaluates based on query, response, and context
+- Scores range from 1-5 with explanatory reasons
+- Comments on answers are included in evaluation
+- Results stored in `output/results.json` alongside answers
 
 ## Data Flow
 

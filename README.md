@@ -110,6 +110,7 @@ Define structured Q&A templates for systematic document analysis:
 - Track completion percentage per section
 - Export results to CSV
 - Edit and comment on answers
+- **Evaluation**: Assess answer quality with Azure AI Evaluation SDK (relevance, coherence, fluency, groundedness)
 
 ## Architecture
 
@@ -186,11 +187,13 @@ Define structured Q&A templates for systematic document analysis:
 
 | Service | Purpose |
 |---------|---------|
-| **Azure OpenAI** | GPT-4.1 (extraction, chat), GPT-4.1 Vision, text-embedding-3-large |
+| **Azure OpenAI** | GPT-4.1 (chat), gpt-5-chat (workflows), GPT-4.1 Vision, text-embedding-3-large |
 | **Azure AI Search** | Vector + hybrid search, semantic ranking, Knowledge Agents |
+| **Azure Blob Storage** | Document and project data storage |
 | **Container Apps** | Serverless hosting for backend/frontend |
 | **AI Foundry** | Model deployments and management |
 | **Application Insights** | Monitoring and logging |
+| **Azure AI Evaluation SDK** | Answer quality assessment (relevance, coherence, fluency, groundedness) |
 
 ### Application
 
@@ -220,8 +223,9 @@ azd up
 ```
 
 **What gets deployed:**
-- AI Foundry with GPT-4.1, GPT-4.1 Vision, text-embedding-3-large
+- AI Foundry with GPT-4.1, gpt-5-chat (workflows), text-embedding-3-large
 - Azure AI Search with semantic ranking enabled
+- Azure Blob Storage for project data
 - Container Apps (backend + frontend)
 - Container Registry, Log Analytics, Application Insights
 
@@ -293,7 +297,7 @@ prism/
 
 All project data is stored in Azure Blob Storage:
 
-- **Production**: Azure Blob Storage account
+- **Production**: Azure Blob Storage with managed identity authentication
 - **Local Development**: Azurite (Azure Storage emulator, included in docker-compose)
 
 ```
@@ -302,11 +306,14 @@ Container: prism-projects
     ├── documents/            # Uploaded files
     ├── output/               # Processed results
     │   ├── extraction_results/*.md
-    │   ├── results.json      # Workflow answers + evaluations
-    │   └── ...
+    │   ├── chunked_documents/*.json
+    │   ├── embedded_documents/*.json
+    │   └── results.json      # Workflow answers + evaluations
     ├── config.json           # Extraction instructions
     └── workflow_config.json  # Q&A templates
 ```
+
+Browse local storage with [Azure Storage Explorer](https://azure.microsoft.com/features/storage-explorer/) connected to `http://localhost:10000`.
 
 ## Cost Estimation
 

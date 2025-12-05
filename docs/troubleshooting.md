@@ -116,15 +116,14 @@ docker-compose -f infra/docker/docker-compose.yml up -d
 
 Check extraction logs:
 ```bash
-# Set debug logging
-export PRISM_LOG_LEVEL=DEBUG
-python main.py process --project myproject
+# View container logs with debug logging
+docker-compose -f infra/docker/docker-compose.yml logs backend
 ```
 
 ### Extraction status shows "failed"
 
 **Solution**:
-1. Check `projects/{name}/output/extraction_status.json` for error details
+1. Check extraction status in the Pipeline view for error details
 2. Use "Re-run" button to force re-extraction
 3. Check Azure OpenAI service health
 

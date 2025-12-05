@@ -345,6 +345,54 @@ def upload_document(project: str, filename: str, content: bytes):
     container.upload_blob(filename, content)
 ```
 
+## Answer Evaluation
+
+Prism includes an evaluation system using the Azure AI Evaluation SDK to assess answer quality.
+
+### Evaluation Metrics
+
+| Metric | Description |
+|--------|-------------|
+| **Relevance** | Does the answer address the question? |
+| **Coherence** | Is the answer logically consistent? |
+| **Fluency** | Is the language natural and readable? |
+| **Groundedness** | Is the answer supported by the retrieved context? |
+
+### Evaluation API
+
+```python
+# Evaluate all answers in a project
+POST /api/evaluation/{project_id}/run
+
+# Evaluate a single question
+POST /api/evaluation/{project_id}/question
+{
+  "section_id": "tech-specs",
+  "question_id": "q1"
+}
+
+# Get evaluation summary
+GET /api/evaluation/{project_id}/summary
+```
+
+### Customizing Evaluation
+
+The evaluation is powered by Azure AI Evaluation SDK. To customize:
+
+```python
+# scripts/evaluation/evaluate_results.py
+from azure.ai.evaluation import (
+    GroundednessEvaluator,
+    RelevanceEvaluator,
+    CoherenceEvaluator,
+    FluencyEvaluator,
+)
+
+# Add custom evaluators or modify scoring logic
+```
+
+**Note**: Evaluation requires `azure-ai-evaluation` package and uses the same Azure OpenAI deployment as chat.
+
 ## Testing Customizations
 
 Always write tests for custom code:
