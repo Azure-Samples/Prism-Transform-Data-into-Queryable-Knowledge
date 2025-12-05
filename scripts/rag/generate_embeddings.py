@@ -3,6 +3,9 @@ Generate embeddings for chunked documents using Azure OpenAI text-embedding-3-la
 
 Reads chunks from blob storage, generates embeddings, saves back to blob.
 
+Uses 'enriched_content' (with document/section context) for embedding generation,
+which improves retrieval by capturing both content AND context in the vector.
+
 Usage:
     python main.py embed --project myproject
 """
@@ -91,7 +94,9 @@ def generate_embeddings_batch(
 
         while retry_count < max_retries:
             try:
-                texts = [chunk['content'] for chunk in batch]
+                # Use enriched_content (with document/section context) for better embeddings
+                # Falls back to 'content' for backwards compatibility with old chunks
+                texts = [chunk.get('enriched_content', chunk['content']) for chunk in batch]
                 response = client.embeddings.create(
                     input=texts,
                     model=deployment_name,

@@ -3,6 +3,11 @@ Chunk deduplicated markdown documents using semantic/structure-aware strategies.
 
 Reads from blob storage, chunks documents, saves back to blob.
 
+Features:
+- Markdown header-aware splitting
+- Contextual chunk enrichment (prepends document/section context for better embeddings)
+- Token-based sizing with tiktoken
+
 Usage:
     python main.py chunk --project myproject
 """
@@ -66,6 +71,45 @@ def extract_page_numbers(markdown: str) -> List[int]:
     page_metadata = re.findall(r'\*\*Page Number\*\*:\s*(\d+)', markdown, re.IGNORECASE)
     page_numbers.extend([int(p) for p in page_metadata])
     return sorted(set(page_numbers)) if page_numbers else [1]
+
+
+def build_context_prefix(source_file: str, section_hierarchy: Dict, page_number: int) -> str:
+    """
+    Build a context prefix to prepend to chunk content for better embeddings.
+
+    This implements "Contextual Chunk Enrichment" - by including document and section
+    context in the chunk, the embedding captures both WHAT the content says and
+    WHERE it comes from, dramatically improving retrieval accuracy.
+
+    Args:
+        source_file: Original document filename
+        section_hierarchy: Dict with Header 1, Header 2, etc. from markdown splitting
+        page_number: Page number in the source document
+
+    Returns:
+        Context string to prepend to chunk content
+    """
+    parts = []
+
+    # Document name (clean up the filename)
+    doc_name = source_file.replace('_', ' ').replace('.pdf', '').replace('.xlsx', '').replace('.msg', '')
+    parts.append(f"Document: {doc_name}")
+
+    # Build section hierarchy (most specific to least)
+    section_parts = []
+    for header_level in ['Header 1', 'Header 2', 'Header 3', 'Header 4']:
+        if header_level in section_hierarchy and section_hierarchy[header_level]:
+            section_parts.append(section_hierarchy[header_level])
+
+    if section_parts:
+        parts.append(f"Section: {' > '.join(section_parts)}")
+
+    # Page reference
+    if page_number:
+        parts.append(f"Page: {page_number}")
+
+    # Format as a clear context block
+    return "\n".join(parts) + "\n\n"
 
 
 def chunk_document(
@@ -182,24 +226,37 @@ def chunk_document(
         chunk_pages = extract_page_numbers(chunk['content'])
         page_number = chunk_pages[0] if chunk_pages else page_numbers[0]
 
+        # Extract section hierarchy from metadata
+        section_hierarchy = chunk['metadata'] if chunk['metadata'] else {}
+
         section_title = None
-        if chunk['metadata']:
+        if section_hierarchy:
             for header_type in ['Header 2', 'Header 3', 'Header 1', 'Header 4']:
-                if header_type in chunk['metadata']:
-                    section_title = chunk['metadata'][header_type]
+                if header_type in section_hierarchy:
+                    section_title = section_hierarchy[header_type]
                     break
+
+        # Build contextual prefix for enriched content
+        context_prefix = build_context_prefix(source_file, section_hierarchy, page_number)
+
+        # Enriched content = context + original content (used for embedding)
+        enriched_content = context_prefix + chunk['content']
+        enriched_token_count = count_tokens(enriched_content)
 
         final_chunks.append({
             'chunk_id': chunk_id,
-            'content': chunk['content'],
+            'content': chunk['content'],  # Original content (for display)
+            'enriched_content': enriched_content,  # Contextual content (for embedding/search)
             'source_file': source_file,
             'source_path': doc_path,
             'page_number': page_number,
             'chunk_index': chunk_counter,
             'total_chunks': len(chunks),
-            'token_count': chunk['token_count'],
+            'token_count': chunk['token_count'],  # Original token count
+            'enriched_token_count': enriched_token_count,  # Enriched token count
             'document_hash': content_hash,
-            'section_title': section_title
+            'section_title': section_title,
+            'section_hierarchy': section_hierarchy  # Full hierarchy for citations
         })
         chunk_counter += 1
 

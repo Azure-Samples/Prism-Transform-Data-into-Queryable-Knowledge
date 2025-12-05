@@ -119,6 +119,10 @@ def transform_chunk_for_index(chunk: Dict) -> Dict:
     """
     Transform chunk to Azure AI Search document format.
 
+    Uses 'enriched_content' (with document/section context) for the searchable content field.
+    This improves both keyword and semantic search by including context in the indexed text.
+    Falls back to 'content' for backwards compatibility with old chunks.
+
     Args:
         chunk: Chunk dictionary with embedding
 
@@ -127,7 +131,8 @@ def transform_chunk_for_index(chunk: Dict) -> Dict:
     """
     return {
         "chunk_id": chunk['chunk_id'],
-        "content": chunk['content'],
+        # Use enriched_content for search (includes document/section context)
+        "content": chunk.get('enriched_content', chunk['content']),
         "content_vector": chunk['embedding'],
         "source_file": chunk['source_file'],
         "page_number": chunk['page_number'],

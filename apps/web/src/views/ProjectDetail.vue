@@ -503,7 +503,86 @@ const hasAnyOutput = computed(() => {
 onMounted(async () => {
   appStore.setSelectedProject(projectId.value)
   await Promise.all([loadStatus(), loadFiles()])
+  // Check for any running tasks and resume polling
+  await checkForRunningTasks()
 })
+
+// Check for running tasks and resume polling if found
+const checkForRunningTasks = async () => {
+  try {
+    const data = await api.getProjectTasks(projectId.value)
+    const runningTask = data.tasks?.find(t => t.status === 'running' || t.status === 'pending')
+
+    if (runningTask) {
+      console.log('Found running task, resuming polling:', runningTask)
+      // Map stage names from backend to frontend
+      const stageMap = {
+        'process': 'process',
+        'chunk': 'chunk',
+        'embed': 'embed',
+        'index_create': 'index_create',
+        'index_upload': 'index_upload',
+        'source_create': 'source_create',
+        'agent_create': 'agent_create'
+      }
+      runningStage.value = stageMap[runningTask.stage] || runningTask.stage
+      taskProgress.value = { current: 0, total: 0, percent: 0, message: 'Resuming...' }
+
+      // Resume polling for this task
+      await resumeTaskPolling(runningTask.id)
+    }
+  } catch (error) {
+    console.error('Failed to check for running tasks:', error)
+  }
+}
+
+// Resume polling for an existing task
+const resumeTaskPolling = async (taskId) => {
+  let attempts = 0
+  const maxAttempts = 7200 // 2 hours max
+
+  await new Promise((resolve, reject) => {
+    const pollStatus = setInterval(async () => {
+      attempts++
+      try {
+        const taskStatus = await api.getTaskStatus(taskId)
+
+        // Update progress
+        if (taskStatus.progress) {
+          taskProgress.value = {
+            current: taskStatus.progress.current || 0,
+            total: taskStatus.progress.total || 0,
+            percent: taskStatus.progress.percent || 0,
+            message: taskStatus.progress.message || ''
+          }
+        }
+
+        if (taskStatus.status === 'completed') {
+          clearInterval(pollStatus)
+          taskProgress.value = { current: 0, total: 0, percent: 0, message: '' }
+          await loadStatus()
+          runningStage.value = null
+          resolve()
+        } else if (taskStatus.status === 'failed') {
+          clearInterval(pollStatus)
+          taskProgress.value = { current: 0, total: 0, percent: 0, message: '' }
+          pipelineError.value = taskStatus.error || 'Pipeline stage failed'
+          await loadStatus()
+          runningStage.value = null
+          reject(new Error(taskStatus.error || 'Pipeline stage failed'))
+        } else if (attempts >= maxAttempts) {
+          clearInterval(pollStatus)
+          taskProgress.value = { current: 0, total: 0, percent: 0, message: '' }
+          pipelineError.value = 'Pipeline stage timed out'
+          runningStage.value = null
+          reject(new Error('Pipeline stage timed out'))
+        }
+      } catch (error) {
+        console.error('Error polling task status:', error)
+      }
+    }, 1000)
+  })
+}
 
 const loadStatus = async () => {
   try {
@@ -583,7 +662,7 @@ const runStage = async (stage, options = {}) => {
     // Poll for status updates
     const taskId = result.task_id
     let attempts = 0
-    const maxAttempts = 600 // 10 minutes max for long extractions
+    const maxAttempts = 7200 // 2 hours max for very long extractions (1 poll/second)
 
     await new Promise((resolve, reject) => {
       const pollStatus = setInterval(async () => {
