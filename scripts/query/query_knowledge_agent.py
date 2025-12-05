@@ -1,26 +1,16 @@
 """
-Interactive Knowledge Agent Query Interface with DevUI.
+Knowledge Agent Query Module.
 
-This script creates an interactive chat interface using Microsoft Agent Framework DevUI
-to query the Azure AI Search Knowledge Agent for document retrieval.
+This module provides document search functionality using Azure AI Search Knowledge Agent.
+Used by the API services (query_service.py, chat_service.py) for document retrieval.
 
 Naming Convention:
     - Index: prism-{project_name}-index
     - Source: prism-{project_name}-source
     - Agent: prism-{project_name}-agent
 
-Usage:
-    python scripts/query_knowledge_agent.py
-
-This will:
-1. Connect to your Azure AI Search Knowledge Agent
-2. Launch an interactive DevUI in your browser (http://localhost:8080)
-3. Allow you to ask questions about your documents
-4. Get AI-generated answers with citations
-
-Requirements:
-    - Knowledge Agent must be created (run: python main.py agent create)
-    - .env configured with Azure credentials
+Primary function:
+    search_documents(query: str) -> str: Search documents and return formatted answer with citations
 """
 
 import os
@@ -38,11 +28,6 @@ from azure.search.documents.agent.models import (
     SearchIndexKnowledgeSourceParams
 )
 
-# Agent Framework imports
-from agent_framework import ChatAgent, ChatMessage, Role, TextContent
-from agent_framework.azure import AzureOpenAIChatClient
-from agent_framework.devui import serve
-
 from scripts.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -55,7 +40,7 @@ load_dotenv()
 AZURE_SEARCH_ENDPOINT = os.getenv("AZURE_SEARCH_ENDPOINT")
 AZURE_SEARCH_ADMIN_KEY = os.getenv("AZURE_SEARCH_ADMIN_KEY")
 AZURE_SEARCH_API_VERSION = os.getenv("AZURE_SEARCH_API_VERSION", "2025-08-01-preview")
-AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
+AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY") or os.getenv("AZURE_OPENAI_KEY")
 AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
 AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2025-01-01-preview")
 AZURE_OPENAI_CHAT_DEPLOYMENT = os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT_NAME", "gpt-5-chat")
@@ -424,49 +409,3 @@ When providing details:
         return {'response': f"Error querying knowledge agent: {e}\n\nDetails:\n{error_details}"}
 
 
-def main():
-    """Launch interactive DevUI for querying the Knowledge Agent."""
-    # Verify configuration
-    if not all([AZURE_SEARCH_ENDPOINT, AZURE_SEARCH_ADMIN_KEY,
-                AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT]):
-        logger.error("Missing required environment variables in .env")
-        return 1
-
-    logger.info(f"Launching DevUI for Knowledge Agent '{KNOWLEDGE_AGENT_NAME}'")
-
-    # Initialize Azure OpenAI Chat Client for the agent
-    chat_client = AzureOpenAIChatClient(
-        api_key=AZURE_OPENAI_API_KEY,
-        endpoint=AZURE_OPENAI_ENDPOINT,
-        deployment_name=AZURE_OPENAI_CHAT_DEPLOYMENT,
-        api_version=AZURE_OPENAI_API_VERSION
-    )
-
-    # Create the agent with access to the knowledge search tool
-    agent = chat_client.create_agent(
-        name="Prism_Knowledge_Agent",
-        instructions="""You are an expert assistant for answering questions about indexed documents.
-
-When users ask questions:
-1. Use the search_documents tool to query the knowledge base
-2. Provide clear, accurate answers based on the retrieved information
-3. Always cite your sources (document names and page numbers)
-4. If information isn't found, clearly state that
-5. For specifications, provide exact values and details as mentioned in documents
-
-Be helpful, precise, and professional.""",
-        tools=[search_documents]
-    )
-
-    # Launch DevUI
-    serve(entities=[agent], auto_open=True)
-
-    return 0
-
-
-if __name__ == "__main__":
-    try:
-        sys.exit(main())
-    except KeyboardInterrupt:
-        logger.info("Shutting down DevUI")
-        sys.exit(0)

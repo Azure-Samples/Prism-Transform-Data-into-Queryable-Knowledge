@@ -196,12 +196,17 @@ const startPolling = (sectionId, taskId) => {
     clearInterval(pollInterval.value)
   }
 
+  let completionHandled = false
+
   pollInterval.value = setInterval(async () => {
+    if (completionHandled) return
+
     try {
       const status = await api.getWorkflowStatus(sectionId, taskId)
       activeTask.value = status
 
       if (status.status === 'completed' || status.status === 'failed') {
+        completionHandled = true
         clearInterval(pollInterval.value)
         pollInterval.value = null
         runningSection.value = null

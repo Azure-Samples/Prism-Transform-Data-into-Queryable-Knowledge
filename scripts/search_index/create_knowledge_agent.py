@@ -32,11 +32,11 @@ Configuration:
 import sys
 import os
 import json
-from pathlib import Path
 from dotenv import load_dotenv
 from scripts.logging_config import get_logger
 
 logger = get_logger(__name__)
+from apps.api.app.services.storage_service import get_storage_service
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents.indexes import SearchIndexClient
 from azure.search.documents.indexes.models import (
@@ -103,8 +103,29 @@ def get_index_name() -> str:
     return "prism-default-index"
 
 
-def main():
-    """Main entry point."""
+def _update_project_config(agent_name: str):
+    """Update project config to mark agent as created."""
+    project_name = os.getenv("PRISM_PROJECT_NAME")
+    if project_name:
+        try:
+            storage = get_storage_service()
+            config = storage.read_json(project_name, "config.json")
+            if config:
+                if 'status' not in config:
+                    config['status'] = {}
+                config['status']['has_agent'] = True
+                config['status']['agent_name'] = agent_name
+                storage.write_json(project_name, "config.json", config)
+        except Exception as e:
+            logger.warning(f"Could not update project status: {e}")
+
+
+def main(force: bool = False):
+    """Main entry point.
+
+    Args:
+        force: If True, automatically recreate existing agent without prompting
+    """
     index_name = get_index_name()
     knowledge_source_name = f"{index_name}-source"
     knowledge_agent_name = f"{index_name}-agent"
@@ -112,7 +133,7 @@ def main():
 
     # Azure OpenAI configuration
     aoai_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
-    aoai_api_key = os.getenv("AZURE_OPENAI_API_KEY")
+    aoai_api_key = os.getenv("AZURE_OPENAI_API_KEY") or os.getenv("AZURE_OPENAI_KEY")
     aoai_chat_deployment = os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT_NAME")
     aoai_agent_model = os.getenv("AZURE_OPENAI_AGENT_MODEL_NAME", "gpt-4.1")
 
@@ -135,11 +156,13 @@ def main():
         agent_names = [a.name for a in existing_agents]
 
         if knowledge_agent_name in agent_names:
-            logger.warning(f"Knowledge agent '{knowledge_agent_name}' already exists")
-            response = input("Delete and recreate? (yes/no): ").strip().lower()
-            if response == 'yes':
+            if force:
+                logger.info(f"Force mode: Deleting existing agent '{knowledge_agent_name}'")
                 client.delete_agent(knowledge_agent_name)
             else:
+                logger.info(f"Knowledge agent '{knowledge_agent_name}' already exists (use force=True to recreate)")
+                # Still update config to mark agent as existing
+                _update_project_config(knowledge_agent_name)
                 return 0
     except Exception as e:
         logger.warning(f"Could not check existing agents: {e}")
@@ -173,23 +196,7 @@ def main():
     try:
         client.create_or_update_agent(agent=agent, api_version=api_version)
         logger.info(f"Complete: Knowledge agent '{knowledge_agent_name}' created (model: {aoai_agent_model})")
-
-        # Update project config to mark agent as created
-        project_name = os.getenv("PRISM_PROJECT_NAME")
-        if project_name:
-            config_path = Path("projects") / project_name / "config.json"
-            if config_path.exists():
-                try:
-                    with open(config_path, 'r') as f:
-                        config = json.load(f)
-                    if 'status' not in config:
-                        config['status'] = {}
-                    config['status']['has_agent'] = True
-                    config['status']['agent_name'] = knowledge_agent_name
-                    with open(config_path, 'w') as f:
-                        json.dump(config, f, indent=2)
-                except Exception as e:
-                    logger.warning(f"Could not update project status: {e}")
+        _update_project_config(knowledge_agent_name)
 
     except Exception as e:
         logger.error(f"Failed to create knowledge agent: {e}")

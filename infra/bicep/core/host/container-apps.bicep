@@ -50,6 +50,19 @@ param authPassword string
 @description('Application Insights connection string')
 param applicationInsightsConnectionString string = ''
 
+// Storage configuration (RBAC-based, no keys)
+@description('Azure Storage account name')
+param storageAccountName string = ''
+
+@description('Azure Storage blob endpoint')
+param storageBlobEndpoint string = ''
+
+@description('Azure Storage container name')
+param storageContainerName string = ''
+
+@description('Azure Storage account resource ID (for role assignment)')
+param storageAccountId string = ''
+
 // ============================================================================
 // Container Registry
 // ============================================================================
@@ -104,7 +117,7 @@ resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2024-03-01'
 }
 
 // ============================================================================
-// Backend Container App
+// Backend Container App (with Managed Identity)
 // ============================================================================
 
 resource backendApp 'Microsoft.App/containerApps@2024-03-01' = {
@@ -113,6 +126,9 @@ resource backendApp 'Microsoft.App/containerApps@2024-03-01' = {
   tags: union(tags, {
     'azd-service-name': 'backend'
   })
+  identity: {
+    type: 'SystemAssigned'
+  }
   properties: {
     managedEnvironmentId: containerAppsEnvironment.id
     configuration: {
@@ -204,6 +220,19 @@ resource backendApp 'Microsoft.App/containerApps@2024-03-01' = {
               name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
               value: applicationInsightsConnectionString
             }
+            {
+              name: 'AZURE_STORAGE_ACCOUNT_NAME'
+              value: storageAccountName
+            }
+            {
+              name: 'AZURE_STORAGE_ACCOUNT_URL'
+              value: storageBlobEndpoint
+            }
+            {
+              name: 'AZURE_STORAGE_CONTAINER_NAME'
+              value: storageContainerName
+            }
+            // No AZURE_STORAGE_ACCOUNT_KEY - uses managed identity
           ]
         }
       ]
@@ -223,6 +252,28 @@ resource backendApp 'Microsoft.App/containerApps@2024-03-01' = {
       }
     }
   }
+}
+
+// ============================================================================
+// Storage Role Assignment for Backend App
+// ============================================================================
+
+// Storage Blob Data Contributor role
+var storageBlobDataContributorRoleId = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
+
+resource storageRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(storageAccountId)) {
+  name: guid(storageAccountId, backendApp.id, storageBlobDataContributorRoleId)
+  scope: storageAccount
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataContributorRoleId)
+    principalId: backendApp.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Reference to existing storage account for scoping the role assignment
+resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' existing = if (!empty(storageAccountId)) {
+  name: storageAccountName
 }
 
 // ============================================================================
@@ -306,3 +357,4 @@ output backendUrl string = 'https://${backendApp.properties.configuration.ingres
 output frontendUrl string = 'https://${frontendApp.properties.configuration.ingress.fqdn}'
 output backendAppName string = backendApp.name
 output frontendAppName string = frontendApp.name
+output backendPrincipalId string = backendApp.identity.principalId

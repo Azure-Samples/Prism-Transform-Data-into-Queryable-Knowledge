@@ -18,13 +18,18 @@ Prism is a document intelligence platform that transforms unstructured documents
 │  │   Project    │  │   Pipeline   │  │   Workflow   │  │    Query     │     │
 │  │   Service    │  │   Service    │  │   Service    │  │   Service    │     │
 │  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘     │
-└──────┬──────────────────┬───────────────────┬───────────────────┬───────────┘
-       │                  │                   │                   │
-       ▼                  ▼                   ▼                   ▼
-┌──────────────┐  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
-│  File System │  │ Local Libs   │    │  Azure AI    │    │ Azure OpenAI │
-│  (Projects)  │  │ (Extraction) │    │   Search     │    │  (GPT-4.1)   │
-└──────────────┘  └──────────────┘    └──────────────┘    └──────────────┘
+│                              │                                               │
+│                    ┌─────────┴─────────┐                                    │
+│                    │  Storage Service  │                                    │
+│                    └─────────┬─────────┘                                    │
+└──────────────────────────────┼──────────────────────────────────────────────┘
+       │                       │                   │                   │
+       ▼                       ▼                   ▼                   ▼
+┌──────────────┐        ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+│ Azure Blob   │        │ Local Libs   │    │  Azure AI    │    │ Azure OpenAI │
+│ Storage /    │        │ (Extraction) │    │   Search     │    │  (GPT-4.1)   │
+│ Azurite      │        └──────────────┘    └──────────────┘    └──────────────┘
+└──────────────┘
 ```
 
 ## Document Processing Layer
@@ -315,17 +320,18 @@ User uploads PDF/Excel/Email
 
 ## Project Isolation
 
-Each project is fully isolated:
+Each project is fully isolated in Azure Blob Storage:
 
 ```
-projects/
+Container: prism-projects
 ├── project-a/
 │   ├── documents/           # Uploaded files
 │   ├── output/
 │   │   ├── extraction_results/*.md
 │   │   ├── extraction_status.json
 │   │   ├── chunked_documents/*.json
-│   │   └── embedded_documents/*.json
+│   │   ├── embedded_documents/*.json
+│   │   └── results.json     # Workflow answers + evaluations
 │   ├── config.json          # Extraction instructions
 │   └── workflow_config.json # Q&A templates
 │
@@ -333,10 +339,14 @@ projects/
 │   └── (same structure)
 ```
 
-Azure resources per project:
+**Storage:**
+- Production: Azure Blob Storage
+- Local Development: Azurite (Azure Storage emulator)
+
+**Azure Search resources per project:**
 - Index: `prism-{project}-index`
-- Knowledge Source: `prism-{project}-source`
-- Knowledge Agent: `prism-{project}-agent`
+- Knowledge Source: `prism-{project}-index-source`
+- Knowledge Agent: `prism-{project}-index-agent`
 
 ## Azure Services
 

@@ -37,8 +37,12 @@ logger = get_logger(__name__)
 # Load environment variables
 load_dotenv()
 
-# Get project name
-PROJECT_NAME = os.getenv("PRISM_PROJECT_NAME", "_example")
+from apps.api.app.services.storage_service import get_storage_service
+
+
+def get_project_name() -> str:
+    """Get project name at runtime (not import time)."""
+    return os.getenv("PRISM_PROJECT_NAME", "_example")
 
 
 def get_index_name() -> str:
@@ -50,7 +54,7 @@ def get_index_name() -> str:
     2. AZURE_SEARCH_INDEX_NAME env var (only if no project specified)
     3. Default: prism-default-index
     """
-    project_name = os.getenv("PRISM_PROJECT_NAME")
+    project_name = get_project_name()
     if project_name:
         return f"prism-{project_name}-index"
 
@@ -62,31 +66,31 @@ def get_index_name() -> str:
 
 
 def load_embedded_chunks() -> List[Dict]:
-    """Load embedded chunks from individual files."""
-    embedded_dir = Path("projects") / PROJECT_NAME / "output" / "embedded_documents"
+    """Load embedded chunks from blob storage."""
+    storage = get_storage_service()
+    project_name = get_project_name()
 
-    if not embedded_dir.exists():
-        logger.error(f"{embedded_dir} not found. Run embedding generation first.")
-        return []
+    files = storage.list_files(project_name, "output/embedded_documents")
 
-    embedded_files = list(embedded_dir.glob("*.json"))
-
-    if not embedded_files:
-        logger.error(f"No embedded chunk files found in {embedded_dir}")
+    if not files:
+        logger.error("No embedded chunk files found. Run embedding generation first.")
         return []
 
     chunks = []
     skipped = 0
-    for chunk_file in embedded_files:
+    for f in files:
+        if not f["name"].endswith(".json"):
+            continue
         try:
-            with open(chunk_file, 'r', encoding='utf-8') as f:
-                chunk = json.load(f)
+            content = storage.read_file(project_name, f"output/embedded_documents/{f['name']}")
+            if content:
+                chunk = json.loads(content.decode('utf-8'))
                 if 'embedding' in chunk:
                     chunks.append(chunk)
                 else:
                     skipped += 1
         except Exception as e:
-            logger.warning(f"Could not load {chunk_file}: {e}")
+            logger.warning(f"Could not load {f['name']}: {e}")
             continue
 
     if skipped > 0:
@@ -384,24 +388,20 @@ def main():
 
     verification = verify_index(client, stats['uploaded'])
 
-    # Save reports
-    reports_dir = Path("indexing_reports")
-    reports_dir.mkdir(exist_ok=True)
+    # Save reports to blob storage
+    storage = get_storage_service()
+    project_name = get_project_name()
 
-    stats_file = reports_dir / "upload_report.json"
-    with open(stats_file, 'w', encoding='utf-8') as f:
-        json.dump({
-            'generated_at': datetime.utcnow().isoformat(),
-            'index_name': index_name,
-            'upload_stats': stats,
-            'verification': verification,
-            'elapsed_time': elapsed_time
-        }, f, indent=2, ensure_ascii=False)
+    storage.write_json(project_name, "output/upload_report.json", {
+        'generated_at': datetime.utcnow().isoformat(),
+        'index_name': index_name,
+        'upload_stats': stats,
+        'verification': verification,
+        'elapsed_time': elapsed_time
+    })
 
     report = generate_upload_report(stats, verification, elapsed_time)
-    report_file = reports_dir / "index_verification.md"
-    with open(report_file, 'w', encoding='utf-8') as f:
-        f.write(report)
+    storage.write_file(project_name, "output/index_verification.md", report.encode('utf-8'))
 
     success_rate = (stats['uploaded'] / stats['total'] * 100) if stats['total'] > 0 else 0
     logger.info(f"Complete: {stats['uploaded']}/{stats['total']} uploaded ({success_rate:.0f}%), {elapsed_time:.1f}s")
@@ -409,20 +409,14 @@ def main():
     # Update project config to mark as indexed
     # Note: index_name is NOT stored in config - it's derived from project name
     if stats['uploaded'] > 0:
-        config_path = Path("projects") / PROJECT_NAME / "config.json"
-        if config_path.exists():
-            try:
-                with open(config_path, 'r') as f:
-                    config = json.load(f)
-                if 'status' not in config:
-                    config['status'] = {}
-                config['status']['is_indexed'] = True
-                # Remove index_name if it exists (we derive it from project name now)
-                config['status'].pop('index_name', None)
-                with open(config_path, 'w') as f:
-                    json.dump(config, f, indent=2)
-            except Exception as e:
-                logger.warning(f"Could not update project status: {e}")
+        config = storage.read_json(project_name, "config.json")
+        if config:
+            if 'status' not in config:
+                config['status'] = {}
+            config['status']['is_indexed'] = True
+            # Remove index_name if it exists (we derive it from project name now)
+            config['status'].pop('index_name', None)
+            storage.write_json(project_name, "config.json", config)
 
     return 0
 

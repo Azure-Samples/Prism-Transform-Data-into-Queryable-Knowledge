@@ -256,10 +256,6 @@ docker-compose -f infra/docker/docker-compose.yml --env-file .env up -d
 
 Access at http://localhost:3000
 
-## Sample Data
-
-The repo includes sample data in `projects/nist-csf/` (NIST Cybersecurity Framework) so you can try the full pipeline immediately.
-
 ## Project Structure
 
 ```
@@ -268,7 +264,7 @@ prism/
 │   ├── api/                      # FastAPI backend
 │   │   └── app/
 │   │       ├── api/              # REST endpoints
-│   │       └── services/         # Pipeline, workflow, query services
+│   │       └── services/         # Pipeline, workflow, storage services
 │   └── web/                      # Vue 3 frontend
 │       └── src/views/            # Dashboard, Query, Workflows, Results
 ├── scripts/
@@ -280,19 +276,36 @@ prism/
 │   │   ├── deduplicate_documents.py
 │   │   ├── chunk_documents.py    # Structure-aware chunking
 │   │   └── generate_embeddings.py
-│   └── search_index/             # Azure AI Search
-│       ├── create_search_index.py
-│       ├── create_knowledge_source.py
-│       └── create_knowledge_agent.py
-├── projects/                     # User projects (per-project isolation)
-│   └── {project}/
-│       ├── documents/            # Uploaded files
-│       ├── output/               # Processed results
-│       ├── config.json           # Extraction instructions
-│       └── workflow_config.json  # Q&A templates
+│   ├── search_index/             # Azure AI Search
+│   │   ├── create_search_index.py
+│   │   ├── create_knowledge_source.py
+│   │   └── create_knowledge_agent.py
+│   └── evaluation/               # Answer quality evaluation
+│       └── evaluate_results.py
+├── workflows/
+│   └── workflow_agent.py         # Q&A workflow execution
 └── infra/
     ├── bicep/                    # Azure infrastructure
-    └── docker/                   # Local development
+    └── docker/                   # Local development (includes Azurite)
+```
+
+## Storage
+
+All project data is stored in Azure Blob Storage:
+
+- **Production**: Azure Blob Storage account
+- **Local Development**: Azurite (Azure Storage emulator, included in docker-compose)
+
+```
+Container: prism-projects
+└── {project-name}/
+    ├── documents/            # Uploaded files
+    ├── output/               # Processed results
+    │   ├── extraction_results/*.md
+    │   ├── results.json      # Workflow answers + evaluations
+    │   └── ...
+    ├── config.json           # Extraction instructions
+    └── workflow_config.json  # Q&A templates
 ```
 
 ## Cost Estimation

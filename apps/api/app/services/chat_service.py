@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
+from apps.api.app.services.storage_service import get_storage_service
+
 
 class ChatService:
     """Service for contextual chat with document search"""
@@ -156,7 +158,7 @@ class ChatService:
         new_comments: Optional[str] = None
     ) -> bool:
         """
-        Update a result in the project's results.json
+        Update a result in the project's results.json (blob storage)
 
         Args:
             project_id: Project ID
@@ -170,13 +172,11 @@ class ChatService:
             True if updated successfully
         """
         try:
-            results_file = Path(self.base_path) / "projects" / project_id / "output" / "results.json"
+            storage = get_storage_service()
+            results = storage.read_json(project_id, "output/results.json")
 
-            if not results_file.exists():
+            if not results:
                 return False
-
-            with open(results_file, 'r', encoding='utf-8') as f:
-                results = json.load(f)
 
             # Navigate to the question
             sections = results.get('sections', {})
@@ -195,9 +195,8 @@ class ChatService:
             if new_comments is not None:
                 questions[question_id]['comments'] = new_comments
 
-            # Save back
-            with open(results_file, 'w', encoding='utf-8') as f:
-                json.dump(results, f, indent=2, ensure_ascii=False)
+            # Save back to blob storage
+            storage.write_json(project_id, "output/results.json", results)
 
             return True
 

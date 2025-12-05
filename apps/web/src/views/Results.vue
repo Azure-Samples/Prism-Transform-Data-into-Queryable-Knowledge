@@ -13,6 +13,18 @@
           </option>
         </select>
         <button
+          @click="runEvaluation"
+          :disabled="!results || evaluating"
+          class="inline-flex items-center px-4 py-2 border border-indigo-300 text-sm font-medium rounded-md text-indigo-700 bg-indigo-50 hover:bg-indigo-100 disabled:opacity-50"
+          title="Run AI evaluation on all answers"
+        >
+          <svg v-if="evaluating" class="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          {{ evaluating ? 'Evaluating...' : 'Run Evaluation' }}
+        </button>
+        <button
           @click="exportCsv"
           :disabled="!results"
           class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
@@ -125,6 +137,28 @@
                   Chat
                 </button>
               </div>
+              <!-- Evaluation Scores -->
+              <div v-if="question.evaluation?.scores" class="mb-3 flex flex-wrap gap-2">
+                <div
+                  v-for="(score, metric) in question.evaluation.scores"
+                  :key="metric"
+                  :title="score.reason || metric"
+                  class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                  :class="getScoreClass(score.score)"
+                >
+                  <span class="capitalize">{{ metric }}</span>
+                  <span class="ml-1 font-bold">{{ score.score ?? '-' }}</span>
+                </div>
+                <div
+                  v-if="question.evaluation.average_score"
+                  class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
+                  title="Average of all scores"
+                >
+                  <span>Avg</span>
+                  <span class="ml-1 font-bold">{{ question.evaluation.average_score }}</span>
+                </div>
+              </div>
+
               <dl class="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-3">
                 <div class="sm:col-span-1">
                   <dt class="text-xs font-medium text-gray-500">Answer</dt>
@@ -177,6 +211,7 @@ const { selectedProject } = storeToRefs(appStore)
 const results = ref(null)
 const selectedSection = ref('all')
 const loading = ref(false)
+const evaluating = ref(false)
 
 const completionPercentage = computed(() => {
   if (!results.value || results.value.total_questions === 0) return 0
@@ -251,6 +286,35 @@ const clearSectionAnswers = async (sectionId) => {
   }
 }
 
+const runEvaluation = async () => {
+  if (!confirm('Run AI evaluation on all answered questions? This may take a few minutes.')) {
+    return
+  }
+
+  evaluating.value = true
+
+  try {
+    const result = await api.runEvaluation(selectedProject.value)
+    console.log('Evaluation complete:', result)
+
+    // Show summary
+    const avgScores = result.average_scores || {}
+    const scoreText = Object.entries(avgScores)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join(', ')
+
+    alert(`Evaluation complete!\n\nEvaluated: ${result.total_evaluated} answers\nAverage scores: ${scoreText || 'N/A'}`)
+
+    // Reload results to show evaluation scores
+    await loadResults()
+  } catch (error) {
+    console.error('Evaluation failed:', error)
+    alert(`Evaluation failed: ${error.response?.data?.detail || error.message}`)
+  } finally {
+    evaluating.value = false
+  }
+}
+
 const openChat = (section, question) => {
   // Set chat context with the question details
   appStore.setChatContext({
@@ -264,5 +328,22 @@ const openChat = (section, question) => {
 
   // Navigate to chat/query page
   router.push('/query')
+}
+
+// Get CSS class for evaluation score badge
+const getScoreClass = (score) => {
+  if (score === null || score === undefined) {
+    return 'bg-gray-100 text-gray-600'
+  }
+  if (score >= 4) {
+    return 'bg-green-100 text-green-800'
+  }
+  if (score >= 3) {
+    return 'bg-yellow-100 text-yellow-800'
+  }
+  if (score >= 2) {
+    return 'bg-orange-100 text-orange-800'
+  }
+  return 'bg-red-100 text-red-800'
 }
 </script>

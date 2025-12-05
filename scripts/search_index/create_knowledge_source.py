@@ -103,8 +103,12 @@ def get_index_name() -> str:
     return "prism-default-index"
 
 
-def main():
-    """Main entry point."""
+def main(force: bool = False):
+    """Main entry point.
+
+    Args:
+        force: If True, automatically recreate existing source without prompting
+    """
     index_name = get_index_name()
     knowledge_source_name = f"{index_name}-source"
     api_version = os.getenv("AZURE_SEARCH_API_VERSION", "2025-08-01-preview")
@@ -124,11 +128,11 @@ def main():
         source_names = [s.name for s in existing_sources]
 
         if knowledge_source_name in source_names:
-            logger.warning(f"Knowledge source '{knowledge_source_name}' already exists")
-            response = input("Delete and recreate? (yes/no): ").strip().lower()
-            if response == 'yes':
+            if force:
+                logger.info(f"Force mode: Deleting existing source '{knowledge_source_name}'")
                 client.delete_knowledge_source(knowledge_source=knowledge_source_name)
             else:
+                logger.info(f"Knowledge source '{knowledge_source_name}' already exists (use force=True to recreate)")
                 return 0
     except Exception as e:
         logger.warning(f"Could not check existing knowledge sources: {e}")

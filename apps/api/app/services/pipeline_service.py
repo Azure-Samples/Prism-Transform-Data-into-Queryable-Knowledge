@@ -1,6 +1,10 @@
 """
 Pipeline Service - Manages document processing pipeline operations
 
+Now uses StorageService for persistence (Azure Blob Storage or local fallback).
+When blob storage is enabled, files are synced to local before processing
+and synced back to blob after processing completes.
+
 Provides async task execution for:
 - Document extraction (process)
 - Deduplication
@@ -21,6 +25,8 @@ from enum import Enum
 from dataclasses import dataclass, field
 import threading
 import traceback
+
+from apps.api.app.services.storage_service import get_storage_service
 
 
 class PipelineStage(str, Enum):
@@ -67,18 +73,14 @@ class PipelineTask:
 
 
 class PipelineService:
-    """Service for managing pipeline operations"""
+    """Service for managing pipeline operations with blob storage support"""
 
     # Class-level storage for progress callbacks (allows scripts to report progress)
     _progress_callbacks: Dict[str, 'PipelineService'] = {}
 
     def __init__(self):
-        """Initialize pipeline service"""
-        # Get base path (project root)
-        self.base_path = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), '../../../..')
-        )
-        self.projects_dir = os.path.join(self.base_path, 'projects')
+        """Initialize pipeline service with storage backend"""
+        self.storage = get_storage_service()
 
         # Task storage (in production, use Redis or database)
         self._tasks: Dict[str, PipelineTask] = {}
@@ -93,14 +95,6 @@ class PipelineService:
                 task.progress.total = total
                 task.progress.message = message
                 task.progress.percent = (current / total * 100) if total > 0 else 0
-
-    def _get_project_path(self, project_name: str) -> Path:
-        """Get project path"""
-        return Path(self.projects_dir) / project_name
-
-    def _get_output_path(self, project_name: str) -> Path:
-        """Get output path"""
-        return self._get_project_path(project_name) / "output"
 
     def get_task(self, task_id: str) -> Optional[PipelineTask]:
         """Get task by ID"""

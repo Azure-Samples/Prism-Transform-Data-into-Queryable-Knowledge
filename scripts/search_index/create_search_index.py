@@ -142,7 +142,7 @@ def create_index_definition(index_name: str, vector_dimensions: int = 1024) -> S
 
     # Get Azure OpenAI embedding configuration
     aoai_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
-    aoai_api_key = os.getenv("AZURE_OPENAI_API_KEY")
+    aoai_api_key = os.getenv("AZURE_OPENAI_API_KEY") or os.getenv("AZURE_OPENAI_KEY")
     aoai_embedding_deployment = os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME", "text-embedding-3-large")
     aoai_embedding_model = os.getenv("AZURE_OPENAI_EMBEDDING_MODEL_NAME", "text-embedding-3-large")
 
@@ -239,8 +239,13 @@ def get_index_name() -> str:
     return "prism-default-index"
 
 
-def main():
-    """Main entry point."""
+def main(force: bool = False):
+    """
+    Main entry point.
+
+    Args:
+        force: If True, delete and recreate existing index. If False, skip if exists.
+    """
     index_name = get_index_name()
     dimensions = int(os.getenv("AZURE_OPENAI_EMBEDDING_DIMENSIONS", "1024"))
 
@@ -254,11 +259,11 @@ def main():
     try:
         existing_indexes = [idx.name for idx in client.list_indexes()]
         if index_name in existing_indexes:
-            logger.warning(f"Index '{index_name}' already exists")
-            response = input("Delete and recreate? (yes/no): ").strip().lower()
-            if response == 'yes':
+            if force:
+                logger.info(f"Index '{index_name}' exists, deleting...")
                 client.delete_index(index_name)
             else:
+                logger.info(f"Index '{index_name}' already exists, skipping")
                 return 0
     except Exception as e:
         logger.warning(f"Could not check existing indexes: {e}")

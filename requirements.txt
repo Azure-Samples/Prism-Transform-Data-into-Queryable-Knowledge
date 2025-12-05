@@ -26,6 +26,9 @@ pymupdf-layout  # Advanced layout analysis (auto header/footer detection)
 langchain-text-splitters  # Semantic chunking with markdown support
 tiktoken  # Token counting for chunking
 
+# Evaluation
+azure-ai-evaluation  # Azure AI Foundry evaluation SDK
+
 # Testing
 pytest
 pytest-asyncio  # For testing async functions

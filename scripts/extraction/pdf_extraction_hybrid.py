@@ -48,7 +48,7 @@ load_dotenv()
 logger = get_logger(__name__)
 
 # Configuration
-AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
+AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY") or os.getenv("AZURE_OPENAI_KEY")
 AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
 AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2025-01-01-preview")
 AZURE_OPENAI_CHAT_DEPLOYMENT = os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT_NAME", "gpt-5-chat")
@@ -436,7 +436,6 @@ async def process_page_hybrid(
 
 async def process_pdf_hybrid(
     pdf_path: Path,
-    project_path: Optional[Path] = None,
     project_instructions: Optional[str] = None
 ) -> Dict:
     """
@@ -444,23 +443,11 @@ async def process_pdf_hybrid(
 
     Args:
         pdf_path: Path to the PDF file
-        project_path: Optional path to project directory (to load config)
-        project_instructions: Optional explicit instructions
+        project_instructions: Optional explicit instructions for extraction
 
     Returns:
         Dict compatible with existing pipeline format
     """
-    # Load project instructions if not provided
-    if project_instructions is None and project_path is not None:
-        config_path = project_path / "config.json"
-        if config_path.exists():
-            try:
-                with open(config_path, 'r') as f:
-                    config = json.load(f)
-                project_instructions = config.get('extraction_instructions')
-            except Exception as e:
-                logger.warning(f"Could not load project config: {e}")
-
     try:
         doc = fitz.open(pdf_path)
         page_count = len(doc)
@@ -531,8 +518,7 @@ async def process_pdf_hybrid(
 
 def process_pdf_hybrid_sync(
     pdf_path: Path,
-    project_path: Optional[Path] = None,
     project_instructions: Optional[str] = None
 ) -> Dict:
     """Synchronous wrapper for async hybrid processing."""
-    return asyncio.run(process_pdf_hybrid(pdf_path, project_path, project_instructions))
+    return asyncio.run(process_pdf_hybrid(pdf_path, project_instructions))

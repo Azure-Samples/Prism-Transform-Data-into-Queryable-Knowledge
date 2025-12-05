@@ -7,18 +7,11 @@ This module provides helper functions used by email_extraction_agents.py:
 Note: This is a utility module, not meant to be run standalone.
 """
 
-import os
 from pathlib import Path
-from datetime import datetime
 import extract_msg
 from scripts.logging_config import get_logger
 
 logger = get_logger(__name__)
-
-# Configuration
-SOURCE_DIR = Path("data/Spec")
-OUTPUT_DIR = Path("data/Spec/extracted_emails")
-ATTACHMENTS_DIR = OUTPUT_DIR / "attachments"
 
 
 def format_email_as_markdown(msg_path: Path) -> str:
@@ -53,7 +46,7 @@ def format_email_as_markdown(msg_path: Path) -> str:
             markdown.append(f"**Date:** {msg.date}")
         markdown.append("")
 
-        # Attachments section
+        # Attachments section (list only, attachments not extracted)
         if msg.attachments:
             markdown.append("## Attachments")
             markdown.append("")
@@ -61,18 +54,6 @@ def format_email_as_markdown(msg_path: Path) -> str:
                 att_name = getattr(attachment, 'longFilename', None) or getattr(attachment, 'shortFilename', f'attachment_{i}')
                 att_size = getattr(attachment, 'size', 0)
                 markdown.append(f"{i}. **{att_name}** ({att_size:,} bytes)")
-
-                # Save attachment if it's a document
-                if att_name and any(att_name.lower().endswith(ext) for ext in ['.pdf', '.xlsx', '.docx', '.txt']):
-                    try:
-                        att_folder = ATTACHMENTS_DIR / msg_path.stem
-                        att_folder.mkdir(parents=True, exist_ok=True)
-                        att_path = att_folder / att_name
-                        attachment.save(customPath=str(att_folder))
-                        markdown.append(f"   - Extracted to: `{att_path.relative_to(SOURCE_DIR)}`")
-                    except Exception as e:
-                        logger.warning(f"Failed to save attachment {att_name}: {e}")
-                        markdown.append(f"   - Could not extract: {e}")
 
             markdown.append("")
 

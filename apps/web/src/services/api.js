@@ -257,6 +257,17 @@ export const clearAllOutput = async (projectId) => {
   return response.data
 }
 
+// Evaluation Operations
+export const runEvaluation = async (projectId) => {
+  const response = await api.post(`/api/evaluation/${projectId}/run`)
+  return response.data
+}
+
+export const getEvaluationSummary = async (projectId) => {
+  const response = await api.get(`/api/evaluation/${projectId}/summary`)
+  return response.data
+}
+
 // Chat Operations
 export const sendChatMessage = async (projectId, message, context = null, conversationHistory = []) => {
   const response = await api.post('/api/chat', {
@@ -288,6 +299,33 @@ export const updateResultFromChat = async (projectId, sectionId, questionId, upd
   }
 
   const response = await api.put('/api/chat/update-result', body)
+  return response.data
+}
+
+// Storage Operations
+export const getStorageStatus = async () => {
+  const response = await api.get('/api/storage/status')
+  return response.data
+}
+
+export const syncProjectToBlob = async (projectName) => {
+  const response = await api.post('/api/storage/sync', {
+    project_name: projectName,
+    direction: 'to_blob'
+  })
+  return response.data
+}
+
+export const syncProjectFromBlob = async (projectName) => {
+  const response = await api.post('/api/storage/sync', {
+    project_name: projectName,
+    direction: 'from_blob'
+  })
+  return response.data
+}
+
+export const listBlobProjects = async () => {
+  const response = await api.get('/api/storage/projects')
   return response.data
 }
 
@@ -345,7 +383,15 @@ export default {
   rollbackStage,
   rollbackToStage,
   clearAllOutput,
+  // Evaluation
+  runEvaluation,
+  getEvaluationSummary,
   // Chat
   sendChatMessage,
   updateResultFromChat,
+  // Storage
+  getStorageStatus,
+  syncProjectToBlob,
+  syncProjectFromBlob,
+  listBlobProjects,
 }

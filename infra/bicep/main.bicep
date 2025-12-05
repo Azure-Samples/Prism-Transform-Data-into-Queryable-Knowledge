@@ -159,6 +159,21 @@ module aiFoundry 'core/ai/ai-foundry.bicep' = {
 }
 
 // ============================================================================
+// Azure Storage (for project files persistence)
+// ============================================================================
+
+module storage 'core/storage/storage-account.bicep' = {
+  name: 'storage'
+  scope: rg
+  params: {
+    location: location
+    tags: tags
+    name: '${abbrs.storageStorageAccounts}prism${resourceToken}'
+    containerName: 'prism-projects'
+  }
+}
+
+// ============================================================================
 // Azure AI Search
 // ============================================================================
 
@@ -217,6 +232,11 @@ module containerApps 'core/host/container-apps.bicep' = if (deployContainerApps)
     authPassword: effectiveAuthPassword
     // Monitoring
     applicationInsightsConnectionString: monitoring.outputs.applicationInsightsConnectionString
+    // Storage (RBAC - no keys, uses managed identity)
+    storageAccountName: storage.outputs.name
+    storageBlobEndpoint: storage.outputs.primaryEndpoint
+    storageContainerName: storage.outputs.containerName
+    storageAccountId: storage.outputs.id
   }
 }
 
@@ -273,3 +293,8 @@ output APPLICATIONINSIGHTS_CONNECTION_STRING string = monitoring.outputs.applica
 // Auth (output the effective password so user knows it)
 #disable-next-line outputs-should-not-contain-secrets
 output AUTH_PASSWORD string = effectiveAuthPassword
+
+// Storage (RBAC only - no keys)
+output AZURE_STORAGE_ACCOUNT_NAME string = storage.outputs.name
+output AZURE_STORAGE_ACCOUNT_URL string = storage.outputs.primaryEndpoint
+output AZURE_STORAGE_CONTAINER_NAME string = storage.outputs.containerName

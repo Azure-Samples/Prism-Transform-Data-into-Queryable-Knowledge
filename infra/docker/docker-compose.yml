@@ -7,6 +7,20 @@
 #   docker-compose -f infra/docker/docker-compose.yml logs -f backend
 
 services:
+  # Azurite - Azure Storage Emulator for local development
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    container_name: prism-azurite
+    ports:
+      - "10000:10000"  # Blob
+      - "10001:10001"  # Queue
+      - "10002:10002"  # Table
+    volumes:
+      - azurite-data:/data
+    command: "azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 -l /data"
+    networks:
+      - prism-network
+
   backend:
     build:
       context: ../..
@@ -20,6 +34,11 @@ services:
       - ../../workflows:/app/workflows
     env_file:
       - ../../.env
+    environment:
+      # Use Azurite for local blob storage
+      - AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;
+    depends_on:
+      - azurite
     restart: unless-stopped
     networks:
       - prism-network
@@ -42,3 +61,6 @@ services:
 networks:
   prism-network:
     driver: bridge
+
+volumes:
+  azurite-data:

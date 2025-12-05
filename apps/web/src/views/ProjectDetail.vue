@@ -364,8 +364,8 @@
               <ul class="text-sm text-gray-600 list-disc list-inside space-y-1">
                 <li v-for="stage in rollbackPreview.stages" :key="stage">
                   {{ formatStageName(stage) }}
-                  <span v-if="rollbackPreview.local_files[stage + '_results'] || rollbackPreview.local_files[stage + '_documents']" class="text-gray-400">
-                    ({{ rollbackPreview.local_files[stage + '_results'] || rollbackPreview.local_files[stage + '_documents'] || rollbackPreview.local_files['extraction_results'] || rollbackPreview.local_files['chunked_documents'] || rollbackPreview.local_files['embedded_documents'] }} files)
+                  <span v-if="rollbackPreview.blob_files && (rollbackPreview.blob_files[stage + '_results'] || rollbackPreview.blob_files[stage + '_documents'])" class="text-gray-400">
+                    ({{ rollbackPreview.blob_files[stage + '_results'] || rollbackPreview.blob_files[stage + '_documents'] || rollbackPreview.blob_files['extraction_results'] || rollbackPreview.blob_files['chunked_documents'] || rollbackPreview.blob_files['embedded_documents'] }} files)
                   </span>
                 </li>
               </ul>
@@ -585,7 +585,7 @@ const runStage = async (stage, options = {}) => {
     let attempts = 0
     const maxAttempts = 600 // 10 minutes max for long extractions
 
-    return new Promise((resolve, reject) => {
+    await new Promise((resolve, reject) => {
       const pollStatus = setInterval(async () => {
         attempts++
         try {
@@ -605,17 +605,20 @@ const runStage = async (stage, options = {}) => {
             clearInterval(pollStatus)
             taskProgress.value = { current: 0, total: 0, percent: 0, message: '' }
             await loadStatus()
+            runningStage.value = null
             resolve()
           } else if (taskStatus.status === 'failed') {
             clearInterval(pollStatus)
             taskProgress.value = { current: 0, total: 0, percent: 0, message: '' }
             pipelineError.value = taskStatus.error || 'Pipeline stage failed'
             await loadStatus()
+            runningStage.value = null
             reject(new Error(taskStatus.error || 'Pipeline stage failed'))
           } else if (attempts >= maxAttempts) {
             clearInterval(pollStatus)
             taskProgress.value = { current: 0, total: 0, percent: 0, message: '' }
             pipelineError.value = 'Pipeline stage timed out'
+            runningStage.value = null
             reject(new Error('Pipeline stage timed out'))
           }
         } catch (error) {
@@ -627,6 +630,7 @@ const runStage = async (stage, options = {}) => {
   } catch (error) {
     taskProgress.value = { current: 0, total: 0, percent: 0, message: '' }
     pipelineError.value = error.response?.data?.detail || 'Failed to start pipeline stage'
+    runningStage.value = null
     throw error
   }
 }

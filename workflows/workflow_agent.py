@@ -24,11 +24,14 @@ from agent_framework import WorkflowBuilder, executor, WorkflowContext
 from agent_framework.azure import AzureOpenAIChatClient
 from agent_framework._workflows._agent_executor import AgentExecutorResponse
 
+# Storage service
+from apps.api.app.services.storage_service import get_storage_service
+
 # Load environment
 load_dotenv()
 
 # Configuration
-AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
+AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY") or os.getenv("AZURE_OPENAI_KEY")
 AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
 AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2025-01-01-preview")
 AZURE_OPENAI_CHAT_DEPLOYMENT = os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT_NAME", "gpt-5-chat")
@@ -36,7 +39,7 @@ AZURE_OPENAI_CHAT_DEPLOYMENT = os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT_NAME", "g
 
 def load_workflow_config(project_name: str) -> Dict:
     """
-    Load workflow configuration from project folder.
+    Load workflow configuration from blob storage.
 
     Args:
         project_name: Name of the project
@@ -44,13 +47,13 @@ def load_workflow_config(project_name: str) -> Dict:
     Returns:
         Workflow config dict with sections and questions
     """
-    config_path = Path("projects") / project_name / "workflow_config.json"
+    storage = get_storage_service()
+    config = storage.read_json(project_name, "workflow_config.json")
 
-    if not config_path.exists():
-        raise FileNotFoundError(f"Workflow config not found: {config_path}")
+    if not config:
+        raise FileNotFoundError(f"Workflow config not found for project: {project_name}")
 
-    with open(config_path, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    return config
 
 
 def get_search_tool(project_name: str):
@@ -85,6 +88,7 @@ class WorkflowAgentFactory:
         """
         self.project_name = project_name
         self.config = load_workflow_config(project_name)
+        self.storage = get_storage_service()
 
         # Initialize chat client
         self.chat_client = AzureOpenAIChatClient(
@@ -96,10 +100,6 @@ class WorkflowAgentFactory:
 
         # Get search tool
         self.search_tool = get_search_tool(project_name)
-
-        # Output directory
-        self.output_dir = Path("projects") / project_name / "output"
-        self.output_dir.mkdir(parents=True, exist_ok=True)
 
     def _build_agent_instructions(self, section: Dict, question: Dict) -> str:
         """
@@ -228,6 +228,10 @@ Comments: [Any additional context, technical details, or important notes]
         question_id = question.get('id', 'unknown')
         question_text = question.get('question', '')
 
+        # Capture storage and project_name for closure
+        storage = self.storage
+        project_name = self.project_name
+
         @executor(id=f"saver_{section_id}_{question_id}")
         async def question_saver(agent_response: AgentExecutorResponse, ctx: WorkflowContext) -> None:
             """Save this question's answer to results file."""
@@ -265,14 +269,9 @@ Comments: [Any additional context, technical details, or important notes]
                     elif current_section == 'comments':
                         comments += ' ' + line_stripped
 
-            # Save to results JSON (simpler than CSV for generic use)
-            results_file = self.output_dir / "results.json"
-
-            # Load existing results or create new
-            if results_file.exists():
-                with open(results_file, 'r', encoding='utf-8') as f:
-                    results = json.load(f)
-            else:
+            # Load existing results from blob storage or create new
+            results = storage.read_json(project_name, "output/results.json")
+            if not results:
                 results = {"sections": {}}
 
             # Ensure section exists in results
@@ -291,11 +290,31 @@ Comments: [Any additional context, technical details, or important notes]
                 "raw_response": response_text
             }
 
-            # Write back
-            with open(results_file, 'w', encoding='utf-8') as f:
-                json.dump(results, f, indent=2, ensure_ascii=False)
+            # Write back to blob storage
+            storage.write_json(project_name, "output/results.json", results)
 
             print(f"[SAVER] Saved {section_id}/{question_id}: {answer[:50]}...")
+
+            # Run evaluation on the answer
+            try:
+                from scripts.evaluation.evaluate_results import evaluate_single_answer
+                print(f"[EVAL] Evaluating {section_id}/{question_id}...")
+
+                eval_result = evaluate_single_answer(
+                    query=question_text,
+                    response=answer,
+                    context=response_text
+                )
+
+                # Update results with evaluation
+                results["sections"][section_id]["questions"][question_id]["evaluation"] = eval_result
+
+                storage.write_json(project_name, "output/results.json", results)
+
+                avg_score = eval_result.get("average_score", "N/A")
+                print(f"[EVAL] {section_id}/{question_id} average score: {avg_score}")
+            except Exception as e:
+                print(f"[EVAL] Evaluation failed for {section_id}/{question_id}: {e}")
 
             await ctx.send_message(f"Saved {section_id}/{question_id}")
 
@@ -351,7 +370,7 @@ SECTION COMPLETE: {section_name}
 {'='*80}
 All {len(questions)} questions have been answered and saved.
 
-Results saved to: projects/{self.project_name}/output/results.json
+Results saved to blob storage: {self.project_name}/output/results.json
 """
             await ctx.yield_output(completion_msg)
 

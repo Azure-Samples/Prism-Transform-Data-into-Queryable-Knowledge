@@ -4,17 +4,13 @@ This guide covers setting up a local development environment for Prism.
 
 ## Prerequisites
 
-- Python 3.11+
-- Node.js 20+
-- Docker (optional, but recommended)
+- Docker (required)
 - Azure subscription with OpenAI and AI Search resources
 
 ## Quick Start with Docker
 
-The fastest way to run locally:
-
 ```bash
-# Ensure .env file is configured
+# Ensure .env file is configured with Azure credentials
 docker-compose -f infra/docker/docker-compose.yml --env-file .env up -d
 ```
 
@@ -22,42 +18,17 @@ Access:
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:8000
 - API Docs: http://localhost:8000/docs
+- Azurite Blob Storage: http://localhost:10000
 
-## Running Without Docker
+## Storage
 
-### Backend Setup
+Local development uses **Azurite** (Azure Storage emulator) for blob storage. This is automatically started by docker-compose.
 
-```bash
-# Create virtual environment
-python -m venv .venv
+All project data (documents, extraction results, workflow answers) is stored in Azurite at:
+- Container: `prism-projects`
+- Connection string: `DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=...;BlobEndpoint=http://azurite:10000/devstoreaccount1;`
 
-# Activate (Linux/Mac)
-source .venv/bin/activate
-
-# Activate (Windows)
-.venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-pip install -r apps/api/requirements-api.txt
-
-# Run the API server
-uvicorn apps.api.app.main:app --reload --port 8000
-```
-
-### Frontend Setup
-
-```bash
-cd apps/web
-
-# Install dependencies
-npm install
-
-# Run development server
-npm run dev
-```
-
-The frontend runs at http://localhost:5173 by default and proxies API requests to the backend.
+You can browse Azurite data using [Azure Storage Explorer](https://azure.microsoft.com/features/storage-explorer/) connected to `http://localhost:10000`.
 
 ## Environment Variables
 
@@ -133,14 +104,6 @@ Add to `.vscode/launch.json`:
       "request": "launch",
       "module": "uvicorn",
       "args": ["apps.api.app.main:app", "--reload", "--port", "8000"],
-      "envFile": "${workspaceFolder}/.env"
-    },
-    {
-      "name": "CLI: Process",
-      "type": "debugpy",
-      "request": "launch",
-      "program": "${workspaceFolder}/main.py",
-      "args": ["process", "--project", "test-project"],
       "envFile": "${workspaceFolder}/.env"
     }
   ]
@@ -229,34 +192,6 @@ Both backend and frontend support hot reloading:
 
 - **Backend**: `uvicorn --reload` watches Python files
 - **Frontend**: Vite provides HMR (Hot Module Replacement)
-
-## Database / Storage
-
-Prism uses file-based storage in the `projects/` directory. For local development:
-
-- Project configs: `projects/{name}/config.json`
-- Documents: `projects/{name}/documents/`
-- Output: `projects/{name}/output/`
-
-No database setup required.
-
-## Using the CLI
-
-The CLI is useful for development and testing:
-
-```bash
-# Process a single project
-python main.py process --project myproject
-
-# Run specific pipeline steps
-python main.py deduplicate --project myproject
-python main.py chunk --project myproject
-python main.py embed --project myproject
-
-# Index operations
-python main.py index create --project myproject
-python main.py index upload --project myproject
-```
 
 ## Troubleshooting Development Issues
 
