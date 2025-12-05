@@ -149,7 +149,7 @@ class ProjectService:
 
         # Determine pipeline stage
         has_documents = document_count > 0
-        is_processed = extraction_count > 0
+        is_processed = extraction_count > 0 and extraction_count >= document_count
         is_chunked = chunk_count > 0
         is_embedded = embedded_count > 0
 
