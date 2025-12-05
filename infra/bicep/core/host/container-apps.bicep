@@ -27,8 +27,11 @@ param aiServicesEndpoint string
 @description('Azure AI Services key')
 param aiServicesKey string
 
-@description('Chat model deployment name')
+@description('Chat model deployment name (for Knowledge Agents/agentic retrieval)')
 param chatDeploymentName string
+
+@description('Workflow model deployment name (for workflow Q&A - can use newer models)')
+param workflowDeploymentName string = ''
 
 @description('Embedding deployment name')
 param embeddingDeploymentName string
@@ -203,6 +206,10 @@ resource backendApp 'Microsoft.App/containerApps@2024-03-01' = {
             {
               name: 'AZURE_OPENAI_MODEL_NAME'
               value: chatDeploymentName
+            }
+            {
+              name: 'AZURE_OPENAI_WORKFLOW_DEPLOYMENT_NAME'
+              value: !empty(workflowDeploymentName) ? workflowDeploymentName : chatDeploymentName
             }
             {
               name: 'AZURE_SEARCH_ENDPOINT'

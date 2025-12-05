@@ -47,7 +47,7 @@ param resourceGroupName string = ''
 @description('Principal ID of the user running the deployment')
 param principalId string = ''
 
-@description('Chat model deployment name')
+@description('Chat model deployment name (for Knowledge Agents/agentic retrieval)')
 param chatDeploymentName string = 'gpt-4.1'
 
 @description('Chat model name')
@@ -55,6 +55,15 @@ param chatModelName string = 'gpt-4.1'
 
 @description('Chat deployment capacity (TPM in thousands)')
 param chatCapacity int = 30
+
+@description('Workflow model deployment name (for workflow Q&A - supports newer models)')
+param workflowDeploymentName string = 'gpt-5-chat'
+
+@description('Workflow model name')
+param workflowModelName string = 'gpt-5-chat'
+
+@description('Workflow deployment capacity (TPM in thousands)')
+param workflowCapacity int = 50
 
 @description('Text embedding model deployment name')
 param embeddingDeploymentName string = 'text-embedding-3-large'
@@ -97,8 +106,19 @@ var modelDeployments = [
       name: chatModelName
     }
     sku: {
-      name: 'Standard'
+      name: 'GlobalStandard'
       capacity: chatCapacity
+    }
+  }
+  {
+    name: workflowDeploymentName
+    model: {
+      format: 'OpenAI'
+      name: workflowModelName
+    }
+    sku: {
+      name: 'GlobalStandard'
+      capacity: workflowCapacity
     }
   }
   {
@@ -224,6 +244,7 @@ module containerApps 'core/host/container-apps.bicep' = if (deployContainerApps)
     aiServicesEndpoint: aiFoundry.outputs.endpoint
     aiServicesKey: aiFoundry.outputs.key
     chatDeploymentName: chatDeploymentName
+    workflowDeploymentName: workflowDeploymentName
     embeddingDeploymentName: embeddingDeploymentName
     // Pass Search configuration
     searchEndpoint: search.outputs.endpoint
@@ -287,6 +308,7 @@ output AZURE_OPENAI_ENDPOINT string = aiFoundry.outputs.endpoint
 #disable-next-line outputs-should-not-contain-secrets
 output AZURE_OPENAI_KEY string = aiFoundry.outputs.key
 output AZURE_OPENAI_CHAT_DEPLOYMENT_NAME string = chatDeploymentName
+output AZURE_OPENAI_WORKFLOW_DEPLOYMENT_NAME string = workflowDeploymentName
 output AZURE_OPENAI_MODEL_NAME string = chatModelName
 output AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME string = embeddingDeploymentName
 output AZURE_OPENAI_API_VERSION string = '2025-01-01-preview'

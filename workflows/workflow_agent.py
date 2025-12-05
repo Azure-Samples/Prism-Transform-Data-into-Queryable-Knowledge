@@ -34,7 +34,8 @@ load_dotenv()
 AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY") or os.getenv("AZURE_OPENAI_KEY")
 AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
 AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2025-01-01-preview")
-AZURE_OPENAI_CHAT_DEPLOYMENT = os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT_NAME", "gpt-5-chat")
+# Use workflow-specific deployment (gpt-5-chat) if available, fall back to chat deployment
+AZURE_OPENAI_CHAT_DEPLOYMENT = os.getenv("AZURE_OPENAI_WORKFLOW_DEPLOYMENT_NAME") or os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT_NAME", "gpt-5-chat")
 
 
 def load_workflow_config(project_name: str) -> Dict:
