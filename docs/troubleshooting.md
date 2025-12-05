@@ -38,6 +38,33 @@ You may need Owner or User Access Administrator role on the subscription.
 2. Verify environment variables are set correctly
 3. Check if Azure OpenAI endpoint is accessible
 
+### Storage AuthorizationFailure error
+
+**Error**: `AuthorizationFailure: This request is not authorized to perform this operation`
+
+This can happen if:
+- The storage account has public network access disabled (often by Azure Policy)
+- The managed identity role assignment hasn't propagated yet
+
+**Solution**:
+1. Check storage account network access:
+   ```shell
+   az storage account show --name <storage-account> --resource-group <rg> --query publicNetworkAccess -o tsv
+   ```
+2. If it shows "Disabled", enable it:
+   ```shell
+   az storage account update --name <storage-account> --resource-group <rg> --public-network-access Enabled
+   ```
+3. Verify the role assignment exists:
+   ```shell
+   az role assignment list --scope "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.Storage/storageAccounts/<storage-account>" --query "[].roleDefinitionName" -o tsv
+   ```
+   Should include `Storage Blob Data Contributor`.
+4. Restart the container app:
+   ```shell
+   az containerapp revision restart --name prism-backend --resource-group <rg> --revision <revision-name>
+   ```
+
 ## Local Development Issues
 
 ### Docker containers won't start

@@ -255,28 +255,6 @@ resource backendApp 'Microsoft.App/containerApps@2024-03-01' = {
 }
 
 // ============================================================================
-// Storage Role Assignment for Backend App
-// ============================================================================
-
-// Storage Blob Data Contributor role
-var storageBlobDataContributorRoleId = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
-
-resource storageRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(storageAccountId)) {
-  name: guid(storageAccountId, backendApp.id, storageBlobDataContributorRoleId)
-  scope: storageAccount
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataContributorRoleId)
-    principalId: backendApp.identity.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// Reference to existing storage account for scoping the role assignment
-resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' existing = if (!empty(storageAccountId)) {
-  name: storageAccountName
-}
-
-// ============================================================================
 // Frontend Container App
 // ============================================================================
 

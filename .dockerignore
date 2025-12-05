@@ -37,8 +37,8 @@ workflows/question_instructions_backup/
 # Project output directories (don't bake local extraction state into image)
 projects/*/output/
 
-# Node
-node_modules/
+# Node (use ** to match nested node_modules in apps/web/)
+**/node_modules/
 npm-debug.log
 yarn-error.log
 .npm/

@@ -255,6 +255,24 @@ module userRoleAssignments 'core/ai/role-assignments.bicep' = if (!empty(princip
 }
 
 // ============================================================================
+// Storage Role Assignment (for Container App Managed Identity)
+// ============================================================================
+
+module storageRoleAssignment 'core/storage/storage-role-assignment.bicep' = if (deployContainerApps) {
+  name: 'storage-role-assignment'
+  scope: rg
+  params: {
+    storageAccountName: storage.outputs.name
+    storageAccountId: storage.outputs.id
+    principalId: containerApps.outputs.backendPrincipalId
+  }
+  dependsOn: [
+    containerApps
+    storage
+  ]
+}
+
+// ============================================================================
 // Outputs
 // ============================================================================
 

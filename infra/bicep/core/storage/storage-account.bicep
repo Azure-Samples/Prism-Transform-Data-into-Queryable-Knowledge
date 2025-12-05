@@ -39,6 +39,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
     allowSharedKeyAccess: false  // RBAC only - local Docker uses mounted Azure CLI credentials
     minimumTlsVersion: 'TLS1_2'
     supportsHttpsTrafficOnly: true
+    publicNetworkAccess: 'Enabled'  // Required for Container Apps to access via managed identity
     networkAcls: {
       defaultAction: 'Allow'
       bypass: 'AzureServices'

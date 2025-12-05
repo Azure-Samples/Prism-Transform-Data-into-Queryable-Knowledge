@@ -8,6 +8,9 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 from apps.api.app.models import ProjectInfo
 from apps.api.app.services.storage_service import get_storage_service
+from scripts.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class ProjectService:
@@ -74,7 +77,23 @@ class ProjectService:
         return self.storage.create_project(project_name)
 
     def delete_project(self, project_name: str) -> bool:
-        """Delete a project and all its contents"""
+        """Delete a project and all its contents, including Azure resources"""
+        # First, clean up Azure resources (index, knowledge source, agent)
+        try:
+            from apps.api.app.services.rollback_service import RollbackService
+            rollback_service = RollbackService()
+
+            # Roll back from extraction (cascades to all stages including Azure resources)
+            result = rollback_service.rollback_stage(project_name, "extraction", cascade=True)
+            if not result.success:
+                logger.warning(f"Rollback had errors for project '{project_name}': {result.errors}")
+            else:
+                logger.info(f"Cleaned up Azure resources for project '{project_name}': {result.deleted_resources}")
+        except Exception as e:
+            # Log but continue - we still want to delete the blob files
+            logger.warning(f"Error cleaning up Azure resources for project '{project_name}': {e}")
+
+        # Then delete all blob files
         return self.storage.delete_project(project_name)
 
     # ==================== File Management ====================

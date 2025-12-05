@@ -25,7 +25,7 @@ from datetime import datetime
 
 from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient
-from azure.core.exceptions import ResourceNotFoundError, ResourceExistsError
+from azure.core.exceptions import ResourceNotFoundError, ResourceExistsError, HttpResponseError
 
 from scripts.logging_config import get_logger
 
@@ -59,12 +59,22 @@ class StorageService:
 
         self._container_client = self._blob_service_client.get_container_client(self.container_name)
 
-        # Ensure container exists
+        # Ensure container exists (skip creation if using managed identity - container created by Bicep)
         try:
             self._container_client.create_container()
             logger.info(f"Created blob container: {self.container_name}")
         except ResourceExistsError:
             pass
+        except HttpResponseError as e:
+            # With RBAC/managed identity, create_container may fail even with correct permissions
+            # The container is created by Bicep, so we just verify it exists
+            if "AuthorizationFailure" in str(e) or "AuthenticationFailed" in str(e):
+                logger.info(f"Container creation skipped (RBAC mode), verifying container exists...")
+                if not self._container_client.exists():
+                    raise ValueError(f"Container {self.container_name} does not exist and cannot be created")
+                logger.info(f"Container {self.container_name} exists")
+            else:
+                raise
 
         logger.info(f"Storage initialized: {self.account_name}/{self.container_name}")
 
