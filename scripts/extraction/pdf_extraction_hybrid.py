@@ -192,7 +192,8 @@ def analyze_page(page: fitz.Page, local_markdown: str, repeated_xrefs: set = Non
 
     Smart filtering:
     - Excludes repeated images (headers/footers/logos that appear on many pages)
-    - Higher threshold for "complex drawings" (50+ vs old 5+)
+    - ONLY triggers Vision for actual images, NOT for vector drawings
+    - PyMuPDF4LLM handles tables/drawings excellently without Vision
 
     Args:
         page: PyMuPDF page object
@@ -212,17 +213,19 @@ def analyze_page(page: fitz.Page, local_markdown: str, repeated_xrefs: set = Non
         real_images = images
 
     has_images = len(real_images) > 0
-    # Raised threshold: 50+ drawings suggests complex diagrams/tables
-    # (was 5, which triggered on almost every page)
+
+    # Vector drawings (table borders, lines, shapes) are handled well by PyMuPDF4LLM
+    # Only track for reporting, don't trigger Vision
     has_complex_drawings = len(drawings) > 50
 
-    # Determine if Vision validation is needed
-    needs_vision = has_images or has_complex_drawings
+    # Vision ONLY for actual embedded images (photos, diagrams, charts)
+    # Tables with lots of borders/lines should NOT trigger Vision - PyMuPDF4LLM handles them
+    needs_vision = has_images
 
     if has_images:
         reason = f"Page has {len(real_images)} content image(s)"
     elif has_complex_drawings:
-        reason = f"Page has {len(drawings)} vector elements (complex layout)"
+        reason = f"Table/drawing page ({len(drawings)} vectors) - local extraction"
     else:
         reason = "Text-only page"
 
