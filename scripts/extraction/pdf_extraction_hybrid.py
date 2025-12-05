@@ -464,9 +464,11 @@ async def process_pdf_hybrid(
 
         # Process all pages
         all_page_results = []
+        page_boundaries = []  # Track where each page starts in final markdown
         local_pages = 0
         validated_pages = 0
         fallback_pages = 0
+        current_offset = 0
 
         for page_num in range(page_count):
             # Report page progress (1-indexed for display)
@@ -475,7 +477,21 @@ async def process_pdf_hybrid(
             page_result = await process_page_hybrid(
                 pdf_path, page_num, page_count, project_instructions, repeated_xrefs
             )
-            all_page_results.append(f"## Page {page_num + 1}\n\n{page_result['markdown']}")
+
+            # Build page content with marker
+            page_content = f"## Page {page_num + 1}\n\n{page_result['markdown']}"
+
+            # Record page boundary (char offset where this page starts)
+            page_boundaries.append({
+                "page": page_num + 1,
+                "start_offset": current_offset,
+                "length": len(page_content)
+            })
+
+            all_page_results.append(page_content)
+
+            # Update offset for next page (content + separator)
+            current_offset += len(page_content) + len("\n\n---\n\n")
 
             # Track processing mode
             mode = page_result.get('processing_mode', 'unknown')
@@ -498,6 +514,7 @@ async def process_pdf_hybrid(
                     "markdown": final_markdown
                 }],
                 "pages": [{"pageNumber": i+1} for i in range(page_count)],
+                "page_boundaries": page_boundaries,  # Structured page offset data for chunking
                 "processing_summary": {
                     "local_pages": local_pages,
                     "validated_pages": validated_pages,
