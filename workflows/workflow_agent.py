@@ -146,13 +146,14 @@ Please provide your answer in the following format:
 
 Answer: [Your direct answer - could be Yes, No, N/A, or a specific value/quantity]
 
-Reference: [Cite the specific document(s) and section(s) where you found this information]
+Reference: [Use the document names and page/location info from the === SOURCE DOCUMENTS === section. Format as: "Document Name (Page N)" or "Document Name (Location)". Do NOT use raw chunk IDs like "ec9320d9_chunk_005" - always use human-readable document names and locations.]
 
 Comments: [Any additional context, technical details, or important notes]
 
 **Important:**
 - Use the search tool to find relevant information in the documents
-- Be precise and cite specific sources
+- Be precise and cite specific sources using document names and page numbers from the SOURCE DOCUMENTS section
+- NEVER cite chunk IDs (e.g., "Chunk: abc123_chunk_001") - always use the document filename and location
 - If information is not found, state "N/A" and explain what you searched for
 - Self-validate your answer by searching for contradicting information
 """)
@@ -296,7 +297,7 @@ Comments: [Any additional context, technical details, or important notes]
 
             print(f"[SAVER] Saved {section_id}/{question_id}: {answer[:50]}...")
 
-            # Run evaluation on the answer
+            # Run evaluation on the answer (async-safe, non-blocking for UI)
             try:
                 from scripts.evaluation.evaluate_results import evaluate_single_answer
                 print(f"[EVAL] Evaluating {section_id}/{question_id}...")
@@ -304,18 +305,21 @@ Comments: [Any additional context, technical details, or important notes]
                 eval_result = evaluate_single_answer(
                     query=question_text,
                     response=answer,
-                    context=response_text
+                    context=response_text,
+                    comments=comments
                 )
 
-                # Update results with evaluation
-                results["sections"][section_id]["questions"][question_id]["evaluation"] = eval_result
-
-                storage.write_json(project_name, "output/results.json", results)
+                # Re-read results to avoid race conditions
+                results = storage.read_json(project_name, "output/results.json")
+                if results and section_id in results.get("sections", {}):
+                    results["sections"][section_id]["questions"][question_id]["evaluation"] = eval_result
+                    storage.write_json(project_name, "output/results.json", results)
 
                 avg_score = eval_result.get("average_score", "N/A")
                 print(f"[EVAL] {section_id}/{question_id} average score: {avg_score}")
             except Exception as e:
                 print(f"[EVAL] Evaluation failed for {section_id}/{question_id}: {e}")
+                # Don't fail the workflow if evaluation fails - continue to next question
 
             await ctx.send_message(f"Saved {section_id}/{question_id}")
 

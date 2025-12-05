@@ -46,19 +46,24 @@ def get_model_config() -> Dict[str, str]:
 def evaluate_single_answer(
     query: str,
     response: str,
-    context: Optional[str] = None
+    context: Optional[str] = None,
+    comments: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Evaluate a single answer using Azure AI Evaluation SDK.
 
     Args:
         query: The question that was asked
-        response: The answer that was generated
+        response: The answer that was generated (includes comments if provided)
         context: The raw response including citations (optional, for groundedness)
+        comments: Additional comments to include in the evaluation
 
     Returns:
         Dictionary with evaluation scores and reasons
     """
+    # Combine answer and comments for evaluation
+    if comments and comments.strip():
+        response = f"{response}\n\nComments: {comments}"
     try:
         from azure.ai.evaluation import (
             GroundednessEvaluator,
@@ -180,6 +185,7 @@ def evaluate_project_results(project_name: str) -> Dict[str, Any]:
             answer = question_data.get("answer", "")
             question_text = question_data.get("question", "")
             raw_response = question_data.get("raw_response", "")
+            comments = question_data.get("comments", "")
 
             # Skip if no answer
             if not answer or not answer.strip():
@@ -187,11 +193,12 @@ def evaluate_project_results(project_name: str) -> Dict[str, Any]:
 
             logger.info(f"Evaluating {section_id}/{question_id}...")
 
-            # Run evaluation
+            # Run evaluation (includes comments in the response)
             eval_result = evaluate_single_answer(
                 query=question_text,
                 response=answer,
-                context=raw_response
+                context=raw_response,
+                comments=comments
             )
 
             # Store evaluation in question data
@@ -256,15 +263,17 @@ def evaluate_question(
     answer = question_data.get("answer", "")
     question_text = question_data.get("question", "")
     raw_response = question_data.get("raw_response", "")
+    comments = question_data.get("comments", "")
 
     if not answer or not answer.strip():
         return {"error": "No answer to evaluate"}
 
-    # Run evaluation
+    # Run evaluation (includes comments in the response)
     eval_result = evaluate_single_answer(
         query=question_text,
         response=answer,
-        context=raw_response
+        context=raw_response,
+        comments=comments
     )
 
     # Save evaluation to blob storage

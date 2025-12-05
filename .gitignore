@@ -68,3 +68,4 @@ projects/*/output/**
 !projects/*/output/.gitkeep
 projects/rfp1/*
 projects/rfp3/*
+fromblob/*

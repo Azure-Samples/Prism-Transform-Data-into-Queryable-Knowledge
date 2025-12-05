@@ -33,7 +33,9 @@ export const createProject = async (name) => {
 }
 
 export const deleteProject = async (projectId) => {
-  const response = await api.delete(`/api/projects/${projectId}`)
+  const response = await api.delete(`/api/projects/${projectId}`, {
+    timeout: 120000  // 2 minute timeout - cascades rollback + deletes blobs
+  })
   return response.data
 }
 
@@ -244,7 +246,9 @@ export const previewRollback = async (projectId, stage, cascade = true) => {
 }
 
 export const rollbackStage = async (projectId, stage, cascade = true) => {
-  const response = await api.post(`/api/rollback/${projectId}/rollback/${stage}?cascade=${cascade}`)
+  const response = await api.post(`/api/rollback/${projectId}/rollback/${stage}?cascade=${cascade}`, {}, {
+    timeout: 120000  // 2 minute timeout - deleting Azure resources can take time
+  })
   return response.data
 }
 
@@ -254,13 +258,27 @@ export const rollbackToStage = async (projectId, targetStage) => {
 }
 
 export const clearAllOutput = async (projectId) => {
-  const response = await api.delete(`/api/rollback/${projectId}/clear-all`)
+  const response = await api.delete(`/api/rollback/${projectId}/clear-all`, {
+    timeout: 120000  // 2 minute timeout - deletes all output + Azure resources
+  })
   return response.data
 }
 
 // Evaluation Operations
 export const runEvaluation = async (projectId) => {
-  const response = await api.post(`/api/evaluation/${projectId}/run`)
+  const response = await api.post(`/api/evaluation/${projectId}/run`, {}, {
+    timeout: 600000  // 10 minute timeout for batch evaluation
+  })
+  return response.data
+}
+
+export const evaluateQuestion = async (projectId, sectionId, questionId) => {
+  const response = await api.post(`/api/evaluation/${projectId}/question`, {
+    section_id: sectionId,
+    question_id: questionId
+  }, {
+    timeout: 60000  // 1 minute timeout for single question
+  })
   return response.data
 }
 
@@ -276,6 +294,8 @@ export const sendChatMessage = async (projectId, message, context = null, conver
     message,
     context,
     conversation_history: conversationHistory
+  }, {
+    timeout: 120000  // 2 minute timeout - RAG queries can be slow with large doc sets
   })
   return response.data
 }
@@ -386,6 +406,7 @@ export default {
   clearAllOutput,
   // Evaluation
   runEvaluation,
+  evaluateQuestion,
   getEvaluationSummary,
   // Chat
   sendChatMessage,

@@ -151,7 +151,7 @@ class ProjectService:
         has_documents = document_count > 0
         is_processed = extraction_count > 0 and extraction_count >= document_count
         is_chunked = chunk_count > 0
-        is_embedded = embedded_count > 0
+        is_embedded = embedded_count > 0 and embedded_count >= chunk_count
 
         # Check if indexed (from config)
         config = self.storage.read_json(project_name, "config.json") or {}

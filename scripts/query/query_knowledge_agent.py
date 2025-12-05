@@ -87,14 +87,14 @@ def _get_chunk_metadata(chunk_id: str) -> dict:
         dict with 'source_file' and 'location'
     """
     try:
-        # Get current index name dynamically
-        AZURE_SEARCH_INDEX_NAME = os.getenv("AZURE_SEARCH_INDEX_NAME", "prism-default-index")
+        # Use shared get_index_name() to respect PRISM_PROJECT_NAME (DRY principle)
+        index_name = get_index_name()
 
         # Initialize search client
         credential = AzureKeyCredential(AZURE_SEARCH_ADMIN_KEY)
         search_client = SearchClient(
             endpoint=AZURE_SEARCH_ENDPOINT,
-            index_name=AZURE_SEARCH_INDEX_NAME,
+            index_name=index_name,
             credential=credential
         )
 

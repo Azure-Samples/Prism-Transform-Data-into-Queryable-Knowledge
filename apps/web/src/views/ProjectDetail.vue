@@ -195,7 +195,7 @@
                   </div>
                   <div class="flex items-center gap-2">
                     <button
-                      v-if="pipelineStatus?.chunking?.is_chunked && !pipelineStatus?.embedding?.is_embedded"
+                      v-if="pipelineStatus?.chunking?.is_chunked && !pipelineStatus?.embedding?.is_embedded && pipelineStatus?.embedding?.count === 0"
                       @click="runStage('embed')"
                       :disabled="runningStage === 'embed'"
                       class="text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 disabled:opacity-50"
@@ -203,8 +203,18 @@
                       {{ runningStage === 'embed' ? 'Running...' : 'Run' }}
                     </button>
                     <span v-if="pipelineStatus?.embedding?.is_embedded" class="text-green-600 text-sm font-medium">Complete</span>
+                    <span v-else-if="pipelineStatus?.embedding?.count > 0 && !pipelineStatus?.embedding?.is_embedded" class="text-yellow-600 text-sm font-medium">Incomplete</span>
                     <button
-                      v-if="pipelineStatus?.embedding?.is_embedded"
+                      v-if="pipelineStatus?.chunking?.is_chunked && pipelineStatus?.embedding?.count > 0"
+                      @click="runStage('embed')"
+                      :disabled="runningStage === 'embed'"
+                      class="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 disabled:opacity-50"
+                      title="Resume embedding remaining chunks"
+                    >
+                      {{ runningStage === 'embed' ? 'Running...' : 'Re-run' }}
+                    </button>
+                    <button
+                      v-if="pipelineStatus?.embedding?.count > 0"
                       @click="confirmRollback('embedding')"
                       :disabled="rollingBack"
                       class="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:opacity-50"
