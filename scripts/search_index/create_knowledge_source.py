@@ -143,7 +143,7 @@ def main(force: bool = False):
         description=f"Knowledge source for document retrieval from {index_name}",
         search_index_parameters=SearchIndexKnowledgeSourceParameters(
             search_index_name=index_name,
-            source_data_select="chunk_id,content,source_file,page_number,chunk_index"
+            source_data_select="chunk_id,content,source_file,location,chunk_index"
         )
     )
 

@@ -162,7 +162,7 @@ Each chunk includes:
   "id": "doc1_chunk_0",
   "content": "chunk text...",
   "source_document": "document1.pdf",
-  "page_number": 1,
+  "location": "Page 1",
   "section": "Introduction"
 }
 ```
@@ -201,7 +201,7 @@ Azure AI Search index includes:
 | content | string | Chunk text (searchable) |
 | embedding | vector | For vector search |
 | source_document | string | Original filename |
-| page_number | int | Page reference |
+| location | string | Document location (Page N, Sheet: Name, etc.) |
 | section | string | Section header |
 
 ### Search Capabilities

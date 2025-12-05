@@ -9,7 +9,7 @@ Index Schema:
     - content (searchable): Markdown content
     - content_vector (vector): 1024-dimensional embedding
     - source_file (filterable): Original document filename
-    - page_number (filterable): Page reference
+    - location (filterable): Document location (Page N, Sheet: Name, etc.)
     - chunk_index (sortable): Position in document
 
 Naming Convention:
@@ -124,9 +124,10 @@ def create_index_definition(index_name: str, vector_dimensions: int = 1024) -> S
             retrievable=True  # CRITICAL: Must be retrievable for Knowledge Agent citations
         ),
 
-        SimpleField(
-            name="page_number",
-            type=SearchFieldDataType.Int32,
+        # Location field - "Page 1", "Sheet: Sales", "Email Body", etc.
+        SearchableField(
+            name="location",
+            type=SearchFieldDataType.String,
             filterable=True,
             sortable=True,
             retrievable=True  # CRITICAL: Must be retrievable for Knowledge Agent citations

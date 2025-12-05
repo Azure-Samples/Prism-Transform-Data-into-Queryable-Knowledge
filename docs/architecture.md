@@ -166,8 +166,8 @@ Prism uses [Azure AI Search Knowledge Agents](https://learn.microsoft.com/azure/
 │  ┌─────────────────────────────────────────────────────────────────────┐    │
 │  │                         Search Index                                 │    │
 │  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐  │    │
-│  │  │ chunk_id │ │ content  │ │ vector   │ │source_file│ │page_number│  │    │
-│  │  │  (key)   │ │(keyword) │ │ (1024D)  │ │(filter)   │ │ (sort)    │  │    │
+│  │  │ chunk_id │ │ content  │ │ vector   │ │source_file│ │ location  │  │    │
+│  │  │  (key)   │ │(keyword) │ │ (1024D)  │ │(filter)   │ │ (filter)  │  │    │
 │  │  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘  │    │
 │  └──────────────────────────────────────────────────────────────────────┘    │
 │                                    │                                          │

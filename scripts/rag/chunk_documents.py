@@ -62,33 +62,60 @@ def load_document_inventory(storage) -> Dict:
     return inventory
 
 
-def split_by_pages(content: str) -> List[Tuple[int, str]]:
+def split_by_document_sections(content: str, source_file: str) -> List[Tuple[str, str]]:
     """
-    Split markdown content by page markers.
+    Split markdown content by document structure markers.
 
-    Looks for "## Page N" markers and splits content into (page_number, content) tuples.
-    Works with existing extractions that have page markers embedded.
+    Handles different document types:
+    - PDF: "## Page N" -> section_id = "Page 1", "Page 2", etc.
+    - Excel: "## Sheet: Name" -> section_id = "Sheet: Sales", "Sheet: Data", etc.
+    - Email: "## Email Metadata", "## Email Body" -> section_id = "Email Metadata", etc.
+    - Other: Falls back to treating entire content as one section
 
     Args:
-        content: Raw markdown with "## Page N" markers
+        content: Raw markdown with structure markers
+        source_file: Original filename (used to detect document type)
 
     Returns:
-        List of (page_number, page_content) tuples
+        List of (section_id, section_content) tuples
+        section_id is used for the "Page" field in context prefix
     """
-    # Pattern matches "## Page 1", "## Page 123", etc.
-    page_pattern = r'^##\s+Page\s+(\d+)\s*$'
+    # Detect document type from filename
+    source_lower = source_file.lower()
+    is_pdf = source_lower.endswith('.pdf')
+    is_excel = source_lower.endswith(('.xlsx', '.xls', '.csv'))
+    is_email = source_lower.endswith('.msg')
 
-    # Find all page markers with their positions
-    markers = list(re.finditer(page_pattern, content, re.MULTILINE | re.IGNORECASE))
+    # Define patterns for each document type
+    if is_pdf:
+        # Match "## Page 1", "## Page 123", etc.
+        pattern = r'^##\s+Page\s+(\d+)\s*$'
+        extract_id = lambda m: f"Page {m.group(1)}"
+    elif is_excel:
+        # Match "## Sheet: SheetName"
+        pattern = r'^##\s+Sheet:\s+(.+?)\s*$'
+        extract_id = lambda m: f"Sheet: {m.group(1)}"
+    elif is_email:
+        # Match "## Email Metadata", "## Email Body", etc.
+        pattern = r'^##\s+(Email\s+\w+)\s*$'
+        extract_id = lambda m: m.group(1)
+    else:
+        # Generic: look for any ## headers as section markers
+        pattern = r'^##\s+(.+?)\s*$'
+        extract_id = lambda m: m.group(1)
+
+    # Find all markers
+    markers = list(re.finditer(pattern, content, re.MULTILINE | re.IGNORECASE))
 
     if not markers:
-        # No page markers - treat as single page
-        return [(1, content)]
+        # No markers found - treat as single section
+        section_id = "Page 1" if is_pdf else "Section 1"
+        return [(section_id, content)]
 
-    pages = []
+    sections = []
     for i, match in enumerate(markers):
-        page_num = int(match.group(1))
-        start = match.end()  # Start after the marker
+        section_id = extract_id(match)
+        start = match.end()
 
         # End is either next marker or end of content
         if i + 1 < len(markers):
@@ -96,16 +123,16 @@ def split_by_pages(content: str) -> List[Tuple[int, str]]:
         else:
             end = len(content)
 
-        page_content = content[start:end].strip()
+        section_content = content[start:end].strip()
 
         # Remove leading/trailing separators (---)
-        page_content = re.sub(r'^---\s*', '', page_content)
-        page_content = re.sub(r'\s*---\s*$', '', page_content)
+        section_content = re.sub(r'^---\s*', '', section_content)
+        section_content = re.sub(r'\s*---\s*$', '', section_content)
 
-        if page_content:  # Only add non-empty pages
-            pages.append((page_num, page_content))
+        if section_content:
+            sections.append((section_id, section_content))
 
-    return pages
+    return sections
 
 
 def clean_section_title(title: str) -> str:
@@ -121,13 +148,18 @@ def clean_section_title(title: str) -> str:
     return title.strip()
 
 
-def build_context_prefix(source_file: str, section_hierarchy: Dict, page_number: int) -> str:
+def build_context_prefix(source_file: str, section_hierarchy: Dict, location: str) -> str:
     """
     Build a context prefix to prepend to chunk content for better embeddings.
 
     This implements "Contextual Chunk Enrichment" - by including document and section
     context in the chunk, the embedding captures both WHAT the content says and
     WHERE it comes from, dramatically improving retrieval accuracy.
+
+    Args:
+        source_file: Original filename
+        section_hierarchy: Dict with Header 1, Header 2, etc. from markdown splitting
+        location: Document location - "Page 1", "Sheet: Sales", "Email Body", etc.
     """
     parts = []
 
@@ -135,7 +167,7 @@ def build_context_prefix(source_file: str, section_hierarchy: Dict, page_number:
     doc_name = source_file.replace('_', ' ').replace('.pdf', '').replace('.xlsx', '').replace('.msg', '')
     parts.append(f"Document: {doc_name}")
 
-    # Build section hierarchy
+    # Build section hierarchy from markdown headers
     section_parts = []
     for header_level in ['Header 1', 'Header 2', 'Header 3', 'Header 4']:
         if header_level in section_hierarchy and section_hierarchy[header_level]:
@@ -146,37 +178,37 @@ def build_context_prefix(source_file: str, section_hierarchy: Dict, page_number:
     if section_parts:
         parts.append(f"Section: {' > '.join(section_parts)}")
 
-    # Page reference
-    if page_number:
-        parts.append(f"Page: {page_number}")
+    # Location (Page N, Sheet: Name, Email Body, etc.)
+    if location:
+        parts.append(f"Location: {location}")
 
     return "\n".join(parts) + "\n\n"
 
 
-def chunk_page_content(
-    page_content: str,
-    page_number: int,
+def chunk_section_content(
+    section_content: str,
+    location: str,
     target_chunk_size: int = 1000,
     chunk_overlap: int = 200,
     min_chunk_size: int = 400
 ) -> List[Dict]:
     """
-    Chunk a single page's content using markdown headers and token limits.
+    Chunk a single section's content using markdown headers and token limits.
 
     Args:
-        page_content: Markdown content for one page
-        page_number: The page number (for metadata)
+        section_content: Markdown content for one section (page/sheet/email part)
+        location: Location identifier - "Page 1", "Sheet: Sales", "Email Body", etc.
         target_chunk_size: Target tokens per chunk
         chunk_overlap: Token overlap between chunks
         min_chunk_size: Minimum tokens to keep a chunk
 
     Returns:
-        List of chunk dicts with content, metadata, page_number
+        List of chunk dicts with content, metadata, location
     """
     # Clean up content
-    page_content = re.sub(r'\n{3,}', '\n\n', page_content)
+    section_content = re.sub(r'\n{3,}', '\n\n', section_content)
 
-    if not page_content.strip():
+    if not section_content.strip():
         return []
 
     # Split by markdown headers
@@ -193,10 +225,10 @@ def chunk_page_content(
     )
 
     try:
-        header_splits = markdown_splitter.split_text(page_content)
+        header_splits = markdown_splitter.split_text(section_content)
     except Exception:
         # Fallback if header splitting fails
-        header_splits = [Document(page_content=page_content, metadata={})]
+        header_splits = [Document(page_content=section_content, metadata={})]
 
     # Merge small adjacent sections
     merged_sections = []
@@ -252,7 +284,7 @@ def chunk_page_content(
                 'content': section_text,
                 'token_count': token_count,
                 'metadata': section_metadata,
-                'page_number': page_number
+                'location': location
             })
         else:
             sub_chunks = text_splitter.split_text(section_text)
@@ -261,7 +293,7 @@ def chunk_page_content(
                     'content': sub_chunk,
                     'token_count': count_tokens(sub_chunk),
                     'metadata': section_metadata,
-                    'page_number': page_number
+                    'location': location
                 })
 
     return chunks
@@ -275,29 +307,29 @@ def chunk_document(
     chunk_overlap: int = 200
 ) -> List[Dict]:
     """
-    Chunk a document with page-aware splitting.
+    Chunk a document with section-aware splitting.
 
     Strategy:
-    1. Split content by page markers ("## Page N")
-    2. Chunk each page independently
-    3. Each chunk knows its exact page number
+    1. Split content by document structure markers (pages/sheets/email parts)
+    2. Chunk each section independently
+    3. Each chunk knows its exact location
     """
     source_file = doc_path.replace('_markdown.md', '').replace('output/extraction_results/', '')
 
-    # Step 1: Split by pages
-    pages = split_by_pages(content)
-    logger.debug(f"Document has {len(pages)} pages")
+    # Step 1: Split by document sections (pages, sheets, email parts)
+    sections = split_by_document_sections(content, source_file)
+    logger.debug(f"Document has {len(sections)} sections")
 
-    # Step 2: Chunk each page
+    # Step 2: Chunk each section
     all_chunks = []
-    for page_number, page_content in pages:
-        page_chunks = chunk_page_content(
-            page_content=page_content,
-            page_number=page_number,
+    for location, section_content in sections:
+        section_chunks = chunk_section_content(
+            section_content=section_content,
+            location=location,
             target_chunk_size=target_chunk_size,
             chunk_overlap=chunk_overlap
         )
-        all_chunks.extend(page_chunks)
+        all_chunks.extend(section_chunks)
 
     # Step 3: Build final chunks with IDs and enriched content
     final_chunks = []
@@ -309,7 +341,7 @@ def chunk_document(
             continue
 
         chunk_id = f"{content_hash[:8]}_chunk_{chunk_counter:03d}"
-        page_number = chunk['page_number']
+        location = chunk['location']
         section_hierarchy = chunk['metadata'] if chunk['metadata'] else {}
 
         # Get section title
@@ -321,7 +353,7 @@ def chunk_document(
                     break
 
         # Build enriched content with context
-        context_prefix = build_context_prefix(source_file, section_hierarchy, page_number)
+        context_prefix = build_context_prefix(source_file, section_hierarchy, location)
         enriched_content = context_prefix + chunk['content']
         enriched_token_count = count_tokens(enriched_content)
 
@@ -331,7 +363,7 @@ def chunk_document(
             'enriched_content': enriched_content,
             'source_file': source_file,
             'source_path': doc_path,
-            'page_number': page_number,
+            'location': location,
             'chunk_index': chunk_counter,
             'total_chunks': 0,  # Updated below
             'token_count': chunk['token_count'],
@@ -362,11 +394,11 @@ def generate_report(all_chunks: List[Dict], documents_processed: int) -> str:
 
     if all_chunks:
         token_counts = [c['token_count'] for c in all_chunks]
-        page_numbers = [c['page_number'] for c in all_chunks]
+        locations = set(c['location'] for c in all_chunks)
         lines.extend([
             f"**Avg Size**: {sum(token_counts)/len(token_counts):.0f} tokens",
             f"**Min/Max**: {min(token_counts)}/{max(token_counts)} tokens",
-            f"**Page Range**: {min(page_numbers)} - {max(page_numbers)}",
+            f"**Unique Locations**: {len(locations)}",
             ""
         ])
 

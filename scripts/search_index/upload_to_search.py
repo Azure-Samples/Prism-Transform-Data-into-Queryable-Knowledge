@@ -135,7 +135,7 @@ def transform_chunk_for_index(chunk: Dict) -> Dict:
         "content": chunk.get('enriched_content', chunk['content']),
         "content_vector": chunk['embedding'],
         "source_file": chunk['source_file'],
-        "page_number": chunk['page_number'],
+        "location": chunk['location'],
         "chunk_index": chunk['chunk_index']
     }
 
@@ -232,7 +232,7 @@ def verify_index(client: SearchClient, expected_count: int) -> Dict:
         sample_results = client.search(
             search_text="voltage transformer",
             top=3,
-            select=["chunk_id", "source_file", "page_number"]
+            select=["chunk_id", "source_file", "location"]
         )
         sample_docs = list(sample_results)
 

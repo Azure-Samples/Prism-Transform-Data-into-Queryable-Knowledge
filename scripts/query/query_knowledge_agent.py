@@ -84,7 +84,7 @@ def _get_chunk_metadata(chunk_id: str) -> dict:
         chunk_id: The chunk ID (e.g., 'd11f08a1_chunk_014')
 
     Returns:
-        dict with 'source_file' and 'page_number'
+        dict with 'source_file' and 'location'
     """
     try:
         # Get current index name dynamically
@@ -99,11 +99,11 @@ def _get_chunk_metadata(chunk_id: str) -> dict:
         )
 
         # Fetch the document by chunk_id
-        doc = search_client.get_document(key=chunk_id, selected_fields=["source_file", "page_number"])
+        doc = search_client.get_document(key=chunk_id, selected_fields=["source_file", "location"])
 
         return {
             'source_file': doc.get('source_file', 'Unknown'),
-            'page_number': doc.get('page_number')
+            'location': doc.get('location')
         }
     except Exception as e:
         logger.debug(f"Could not fetch metadata for {chunk_id}: {e}")
@@ -340,32 +340,32 @@ When providing details:
                     # Try to get source_file from the reference
                     # The doc_key is the chunk_id, need to look it up
                     source_file = None
-                    page_number = None
+                    location = None
 
                     # If we have access to the document content from search results
                     if 'content' in ref_dict:
-                        # Extract source_file and page_number if available in content
+                        # Extract source_file and location if available in content
                         content_doc = ref_dict.get('content', {})
                         if isinstance(content_doc, dict):
                             source_file = content_doc.get('source_file')
-                            page_number = content_doc.get('page_number')
+                            location = content_doc.get('location')
 
                     # Fallback: try to extract from doc_key field itself
                     if not source_file and 'source_file' in ref_dict:
                         source_file = ref_dict.get('source_file')
-                        page_number = ref_dict.get('page_number')
+                        location = ref_dict.get('location')
 
                     # Last resort: lookup from chunk metadata cache
                     if not source_file and doc_key and doc_key != 'Unknown':
                         chunk_meta = _get_chunk_metadata(doc_key)
                         source_file = chunk_meta.get('source_file')
-                        page_number = chunk_meta.get('page_number')
+                        location = chunk_meta.get('location')
 
                     # Create a readable citation
                     if source_file:
                         doc_citation = source_file
-                        if page_number:
-                            doc_citation += f" (Page {page_number})"
+                        if location:
+                            doc_citation += f" ({location})"
 
                         # Only add if we haven't seen this source yet
                         if doc_citation not in seen_sources:
