@@ -19,6 +19,7 @@ from typing import List, Dict
 from dotenv import load_dotenv
 
 from openai import AzureOpenAI
+from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from scripts.logging_config import get_logger
 from apps.api.app.services.storage_service import get_storage_service
 
@@ -61,16 +62,25 @@ def get_embedded_chunk_ids(storage) -> set:
 
 
 def init_openai_client():
-    """Initialize Azure OpenAI client."""
-    api_key = os.getenv("AZURE_OPENAI_API_KEY") or os.getenv("AZURE_OPENAI_KEY")
+    """Initialize Azure OpenAI client with DefaultAzureCredential (Managed Identity)."""
     endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
     api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2025-01-01-preview")
 
-    if not api_key or not endpoint:
-        logger.error("Azure OpenAI credentials not found")
+    if not endpoint:
+        logger.error("AZURE_OPENAI_ENDPOINT not set")
         return None
 
-    return AzureOpenAI(api_key=api_key, azure_endpoint=endpoint, api_version=api_version)
+    # Use DefaultAzureCredential for managed identity auth
+    # Works with: Managed Identity (Container Apps), Azure CLI, VS Code, etc.
+    credential = DefaultAzureCredential()
+    token_provider = get_bearer_token_provider(credential, "https://cognitiveservices.azure.com/.default")
+
+    logger.info("Using DefaultAzureCredential for Azure OpenAI authentication")
+    return AzureOpenAI(
+        azure_ad_token_provider=token_provider,
+        azure_endpoint=endpoint,
+        api_version=api_version
+    )
 
 
 def generate_embeddings_batch(

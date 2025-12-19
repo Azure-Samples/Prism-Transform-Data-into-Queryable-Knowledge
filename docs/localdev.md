@@ -30,13 +30,24 @@ All project data (documents, extraction results, workflow answers) is stored in 
 
 You can browse Azurite data using [Azure Storage Explorer](https://azure.microsoft.com/features/storage-explorer/) connected to `http://localhost:10000`.
 
+## Authentication
+
+Prism uses `DefaultAzureCredential` for Azure OpenAI and Storage authentication. This works automatically in:
+
+- **Container Apps (Production)**: Uses system-assigned managed identity
+- **Local Development**: Uses your Azure CLI credentials
+
+For local development, ensure you're logged in:
+```bash
+az login
+```
+
 ## Environment Variables
 
 Copy `.env.example` to `.env` and fill in your values:
 
 ```bash
-# Azure OpenAI
-AZURE_OPENAI_API_KEY=your-key
+# Azure OpenAI (no API key needed - uses DefaultAzureCredential)
 AZURE_OPENAI_ENDPOINT=https://your-resource.cognitiveservices.azure.com
 AZURE_OPENAI_MODEL_NAME=gpt-4.1
 AZURE_OPENAI_API_VERSION=2025-01-01-preview
@@ -54,6 +65,8 @@ AUTH_PASSWORD=dev-password
 # Optional: Debug logging
 PRISM_LOG_LEVEL=DEBUG
 ```
+
+> **Note**: `AZURE_OPENAI_API_KEY` is no longer required. Authentication uses `DefaultAzureCredential` which automatically picks up your Azure CLI credentials locally or managed identity in Container Apps.
 
 ## IDE Setup
 

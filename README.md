@@ -191,7 +191,8 @@ azd up
 - AI Foundry with GPT-4.1, gpt-5-chat (workflows), text-embedding-3-large
 - Azure AI Search with semantic ranking enabled
 - Azure Blob Storage for project data
-- Container Apps (backend + frontend)
+- Container Apps with system-assigned managed identity (backend + frontend)
+- RBAC role assignments (Storage Blob Data Contributor, Cognitive Services OpenAI User)
 - Container Registry, Log Analytics, Application Insights
 
 **Get the auth password:**
@@ -258,12 +259,16 @@ prism/
     └── docker/                   # Local development (includes Azurite)
 ```
 
-## Storage
+## Storage & Authentication
 
 All project data is stored in Azure Blob Storage:
 
-- **Production**: Azure Blob Storage with managed identity authentication
+- **Production**: Azure Blob Storage with managed identity authentication (no keys required)
 - **Local Development**: Azurite (Azure Storage emulator, included in docker-compose)
+
+**Authentication**: Uses `DefaultAzureCredential` from `azure-identity`, which automatically:
+- In Container Apps: Uses system-assigned managed identity
+- In local development: Uses Azure CLI credentials (`az login`)
 
 ```
 Container: prism-projects

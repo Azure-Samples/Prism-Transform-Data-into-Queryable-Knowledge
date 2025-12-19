@@ -409,8 +409,14 @@ Container: prism-projects
 
 ## Security Considerations
 
-- **Authentication**: Password-based (upgrade to Entra ID for production)
-- **API Keys**: Environment variables / Container App secrets
+- **Authentication**:
+  - Azure OpenAI: Managed Identity via `DefaultAzureCredential` (no API keys in production)
+  - Storage: Managed Identity with RBAC (Storage Blob Data Contributor role)
+  - User Auth: Password-based (upgrade to Entra ID for production)
+- **Managed Identity**: Container Apps use system-assigned managed identity
+- **RBAC Role Assignments** (provisioned via Bicep):
+  - Storage Blob Data Contributor - for blob storage access
+  - Cognitive Services OpenAI User - for Azure OpenAI access
 - **Data**: Stored in Azure-hosted containers
 - **Network**: HTTPS for all external communication
 

@@ -294,6 +294,23 @@ module storageRoleAssignment 'core/storage/storage-role-assignment.bicep' = if (
 }
 
 // ============================================================================
+// AI Services Role Assignment (for Container App Managed Identity)
+// ============================================================================
+
+module aiServicesRoleAssignment 'core/ai/ai-services-role-assignment.bicep' = if (deployContainerApps) {
+  name: 'ai-services-role-assignment'
+  scope: rg
+  params: {
+    aiServicesAccountName: aiFoundry.outputs.accountName
+    principalId: containerApps.outputs.backendPrincipalId
+  }
+  dependsOn: [
+    containerApps
+    aiFoundry
+  ]
+}
+
+// ============================================================================
 // Outputs
 // ============================================================================
 

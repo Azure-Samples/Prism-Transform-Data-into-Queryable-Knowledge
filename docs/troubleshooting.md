@@ -182,6 +182,32 @@ docker-compose -f infra/docker/docker-compose.yml logs backend
 
 ## Azure Service Issues
 
+### Azure OpenAI authentication errors
+
+**Error**: `Key based authentication is disabled for this resource` (403)
+
+This occurs when the Azure AI Services resource has key-based authentication disabled (common in enterprise environments with security policies).
+
+**Solution**: Prism uses `DefaultAzureCredential` with managed identity for authentication. Ensure:
+
+1. The Container App has a system-assigned managed identity enabled
+2. The managed identity has the `Cognitive Services OpenAI User` role on the AI Services account:
+   ```bash
+   # Check existing role assignments
+   az role assignment list --scope "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.CognitiveServices/accounts/<ai-services-name>" --query "[].roleDefinitionName" -o tsv
+
+   # Assign the role if missing
+   az role assignment create \
+     --role "Cognitive Services OpenAI User" \
+     --assignee-object-id <container-app-principal-id> \
+     --assignee-principal-type ServicePrincipal \
+     --scope "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.CognitiveServices/accounts/<ai-services-name>"
+   ```
+3. Restart the container app after role assignment:
+   ```bash
+   az containerapp revision restart --name prism-backend --resource-group <rg> --revision <revision-name>
+   ```
+
 ### Azure OpenAI errors
 
 **Error**: `RateLimitExceeded`

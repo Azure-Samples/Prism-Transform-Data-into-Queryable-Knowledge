@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.38.33.27573",
-      "templateHash": "9282238396123534777"
+      "templateHash": "11262894086726385049"
     }
   },
   "parameters": {
@@ -66,7 +66,7 @@
       "type": "string",
       "defaultValue": "gpt-4.1",
       "metadata": {
-        "description": "Chat model deployment name"
+        "description": "Chat model deployment name (for Knowledge Agents/agentic retrieval)"
       }
     },
     "chatModelName": {
@@ -81,6 +81,27 @@
       "defaultValue": 30,
       "metadata": {
         "description": "Chat deployment capacity (TPM in thousands)"
+      }
+    },
+    "workflowDeploymentName": {
+      "type": "string",
+      "defaultValue": "gpt-5-chat",
+      "metadata": {
+        "description": "Workflow model deployment name (for workflow Q&A - supports newer models)"
+      }
+    },
+    "workflowModelName": {
+      "type": "string",
+      "defaultValue": "gpt-5-chat",
+      "metadata": {
+        "description": "Workflow model name"
+      }
+    },
+    "workflowCapacity": {
+      "type": "int",
+      "defaultValue": 50,
+      "metadata": {
+        "description": "Workflow deployment capacity (TPM in thousands)"
       }
     },
     "embeddingDeploymentName": {
@@ -146,8 +167,19 @@
           "name": "[parameters('chatModelName')]"
         },
         "sku": {
-          "name": "Standard",
+          "name": "GlobalStandard",
           "capacity": "[parameters('chatCapacity')]"
+        }
+      },
+      {
+        "name": "[parameters('workflowDeploymentName')]",
+        "model": {
+          "format": "OpenAI",
+          "name": "[parameters('workflowModelName')]"
+        },
+        "sku": {
+          "name": "GlobalStandard",
+          "capacity": "[parameters('workflowCapacity')]"
         }
       },
       {
@@ -600,7 +632,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.38.33.27573",
-              "templateHash": "18182436934161665795"
+              "templateHash": "3525456105435001400"
             }
           },
           "parameters": {
@@ -660,6 +692,7 @@
                 "allowSharedKeyAccess": false,
                 "minimumTlsVersion": "TLS1_2",
                 "supportsHttpsTrafficOnly": true,
+                "publicNetworkAccess": "Enabled",
                 "networkAcls": {
                   "defaultAction": "Allow",
                   "bypass": "AzureServices"
@@ -1049,6 +1082,9 @@
           "chatDeploymentName": {
             "value": "[parameters('chatDeploymentName')]"
           },
+          "workflowDeploymentName": {
+            "value": "[parameters('workflowDeploymentName')]"
+          },
           "embeddingDeploymentName": {
             "value": "[parameters('embeddingDeploymentName')]"
           },
@@ -1084,7 +1120,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.38.33.27573",
-              "templateHash": "17789426749417571497"
+              "templateHash": "17282397315926084755"
             }
           },
           "parameters": {
@@ -1140,7 +1176,14 @@
             "chatDeploymentName": {
               "type": "string",
               "metadata": {
-                "description": "Chat model deployment name"
+                "description": "Chat model deployment name (for Knowledge Agents/agentic retrieval)"
+              }
+            },
+            "workflowDeploymentName": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Workflow model deployment name (for workflow Q&A - can use newer models)"
               }
             },
             "embeddingDeploymentName": {
@@ -1202,9 +1245,6 @@
                 "description": "Azure Storage account resource ID (for role assignment)"
               }
             }
-          },
-          "variables": {
-            "storageBlobDataContributorRoleId": "ba92f5b4-2d11-453d-a403-e96b0029c9fe"
           },
           "resources": [
             {
@@ -1348,6 +1388,10 @@
                           "value": "[parameters('chatDeploymentName')]"
                         },
                         {
+                          "name": "AZURE_OPENAI_WORKFLOW_DEPLOYMENT_NAME",
+                          "value": "[if(not(empty(parameters('workflowDeploymentName'))), parameters('workflowDeploymentName'), parameters('chatDeploymentName'))]"
+                        },
+                        {
                           "name": "AZURE_SEARCH_ENDPOINT",
                           "value": "[parameters('searchEndpoint')]"
                         },
@@ -1397,21 +1441,6 @@
               "dependsOn": [
                 "[resourceId('Microsoft.App/managedEnvironments', parameters('environmentName'))]",
                 "[resourceId('Microsoft.ContainerRegistry/registries', parameters('registryName'))]"
-              ]
-            },
-            {
-              "condition": "[not(empty(parameters('storageAccountId')))]",
-              "type": "Microsoft.Authorization/roleAssignments",
-              "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.Storage/storageAccounts/{0}', parameters('storageAccountName'))]",
-              "name": "[guid(parameters('storageAccountId'), resourceId('Microsoft.App/containerApps', parameters('backendAppName')), variables('storageBlobDataContributorRoleId'))]",
-              "properties": {
-                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageBlobDataContributorRoleId'))]",
-                "principalId": "[reference(resourceId('Microsoft.App/containerApps', parameters('backendAppName')), '2024-03-01', 'full').identity.principalId]",
-                "principalType": "ServicePrincipal"
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.App/containerApps', parameters('backendAppName'))]"
               ]
             },
             {
@@ -1642,6 +1671,149 @@
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', variables('rgName'))]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'search')]"
       ]
+    },
+    {
+      "condition": "[parameters('deployContainerApps')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "storage-role-assignment",
+      "resourceGroup": "[variables('rgName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "storageAccountName": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'storage'), '2025-04-01').outputs.name.value]"
+          },
+          "storageAccountId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'storage'), '2025-04-01').outputs.id.value]"
+          },
+          "principalId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'container-apps'), '2025-04-01').outputs.backendPrincipalId.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.38.33.27573",
+              "templateHash": "7174336035900052706"
+            }
+          },
+          "parameters": {
+            "storageAccountName": {
+              "type": "string",
+              "metadata": {
+                "description": "Storage account name"
+              }
+            },
+            "storageAccountId": {
+              "type": "string",
+              "metadata": {
+                "description": "Storage account resource ID"
+              }
+            },
+            "principalId": {
+              "type": "string",
+              "metadata": {
+                "description": "Principal ID of the managed identity (from Container App)"
+              }
+            }
+          },
+          "variables": {
+            "storageBlobDataContributorRoleId": "ba92f5b4-2d11-453d-a403-e96b0029c9fe"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.Storage/storageAccounts/{0}', parameters('storageAccountName'))]",
+              "name": "[guid(parameters('storageAccountId'), parameters('principalId'), variables('storageBlobDataContributorRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageBlobDataContributorRoleId'))]",
+                "principalId": "[parameters('principalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'container-apps')]",
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', variables('rgName'))]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'storage')]"
+      ]
+    },
+    {
+      "condition": "[parameters('deployContainerApps')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "ai-services-role-assignment",
+      "resourceGroup": "[variables('rgName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "aiServicesAccountName": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'ai-foundry'), '2025-04-01').outputs.accountName.value]"
+          },
+          "principalId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'container-apps'), '2025-04-01').outputs.backendPrincipalId.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.38.33.27573",
+              "templateHash": "10685338653580861410"
+            }
+          },
+          "parameters": {
+            "aiServicesAccountName": {
+              "type": "string",
+              "metadata": {
+                "description": "AI Services account name"
+              }
+            },
+            "principalId": {
+              "type": "string",
+              "metadata": {
+                "description": "Principal ID of the managed identity (from Container App)"
+              }
+            }
+          },
+          "variables": {
+            "cognitiveServicesOpenAIUserRoleId": "5e0bd9bd-7b93-4f28-af87-19fc36ad61bd"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.CognitiveServices/accounts/{0}', parameters('aiServicesAccountName'))]",
+              "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('aiServicesAccountName')), parameters('principalId'), variables('cognitiveServicesOpenAIUserRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('cognitiveServicesOpenAIUserRoleId'))]",
+                "principalId": "[parameters('principalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'ai-foundry')]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'container-apps')]",
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', variables('rgName'))]"
+      ]
     }
   ],
   "outputs": {
@@ -1672,6 +1844,10 @@
     "AZURE_OPENAI_CHAT_DEPLOYMENT_NAME": {
       "type": "string",
       "value": "[parameters('chatDeploymentName')]"
+    },
+    "AZURE_OPENAI_WORKFLOW_DEPLOYMENT_NAME": {
+      "type": "string",
+      "value": "[parameters('workflowDeploymentName')]"
     },
     "AZURE_OPENAI_MODEL_NAME": {
       "type": "string",

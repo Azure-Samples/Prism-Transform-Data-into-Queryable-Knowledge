@@ -24,6 +24,9 @@ from agent_framework import WorkflowBuilder, executor, WorkflowContext
 from agent_framework.azure import AzureOpenAIChatClient
 from agent_framework._workflows._agent_executor import AgentExecutorResponse
 
+# Azure Identity for managed identity auth
+from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+
 # Storage service
 from apps.api.app.services.storage_service import get_storage_service
 
@@ -31,11 +34,14 @@ from apps.api.app.services.storage_service import get_storage_service
 load_dotenv()
 
 # Configuration
-AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY") or os.getenv("AZURE_OPENAI_KEY")
 AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
 AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2025-01-01-preview")
 # Use workflow-specific deployment (gpt-5-chat) if available, fall back to chat deployment
 AZURE_OPENAI_CHAT_DEPLOYMENT = os.getenv("AZURE_OPENAI_WORKFLOW_DEPLOYMENT_NAME") or os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT_NAME", "gpt-5-chat")
+
+# Create token provider for Azure AD auth
+_credential = DefaultAzureCredential()
+_token_provider = get_bearer_token_provider(_credential, "https://cognitiveservices.azure.com/.default")
 
 
 def load_workflow_config(project_name: str) -> Dict:
@@ -91,9 +97,9 @@ class WorkflowAgentFactory:
         self.config = load_workflow_config(project_name)
         self.storage = get_storage_service()
 
-        # Initialize chat client
+        # Initialize chat client with DefaultAzureCredential (Managed Identity)
         self.chat_client = AzureOpenAIChatClient(
-            api_key=AZURE_OPENAI_API_KEY,
+            azure_ad_token_provider=_token_provider,
             endpoint=AZURE_OPENAI_ENDPOINT,
             deployment_name=AZURE_OPENAI_CHAT_DEPLOYMENT,
             api_version=AZURE_OPENAI_API_VERSION

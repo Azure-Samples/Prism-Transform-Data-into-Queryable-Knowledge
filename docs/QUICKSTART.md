@@ -12,12 +12,11 @@ Get Prism running in 5 minutes!
 Copy `.env.example` to `.env` and fill in your values:
 
 ```bash
-# Azure OpenAI
-AZURE_OPENAI_API_KEY=your-key
-AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com
-AZURE_OPENAI_MODEL_NAME=gpt-4
+# Azure OpenAI (no API key needed - uses DefaultAzureCredential)
+AZURE_OPENAI_ENDPOINT=https://your-resource.cognitiveservices.azure.com
+AZURE_OPENAI_MODEL_NAME=gpt-4.1
 AZURE_OPENAI_API_VERSION=2025-01-01-preview
-AZURE_OPENAI_CHAT_DEPLOYMENT_NAME=gpt-4
+AZURE_OPENAI_CHAT_DEPLOYMENT_NAME=gpt-4.1
 
 # Azure AI Search
 AZURE_SEARCH_ENDPOINT=https://your-search.search.windows.net
@@ -26,6 +25,10 @@ AZURE_SEARCH_ADMIN_KEY=your-key
 # Authentication
 AUTH_PASSWORD=your-password
 ```
+
+> **Note**: Azure OpenAI authentication uses `DefaultAzureCredential` which automatically picks up:
+> - **Container Apps**: System-assigned managed identity
+> - **Local development**: Azure CLI credentials (`az login`)
 
 ## 2. Start the Application
 

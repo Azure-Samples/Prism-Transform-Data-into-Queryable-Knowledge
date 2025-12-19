@@ -13,12 +13,20 @@ The default password-based authentication is suitable for demos but not producti
    - Use MSAL for frontend authentication
    - Validate tokens in the backend
 
-2. **API Key Management**
-   - Rotate API keys regularly
-   - Use Azure Key Vault for secret storage
+2. **Managed Identity for Azure Services**
+   - Prism uses `DefaultAzureCredential` for Azure OpenAI and Storage authentication
+   - Container Apps use system-assigned managed identity (no API keys required)
+   - Required RBAC roles are automatically assigned during deployment:
+     - `Cognitive Services OpenAI User` on AI Services account
+     - `Storage Blob Data Contributor` on Storage account
+   - Benefits: No secrets to manage, automatic credential rotation, audit trail
+
+3. **Secret Management**
+   - Use Azure Key Vault for any remaining secrets
+   - Container Apps secrets for environment-specific values
    - Never commit secrets to source control
 
-3. **Role-Based Access Control**
+4. **Role-Based Access Control**
    - Implement project-level permissions
    - Separate admin and user roles
    - Audit access logs
@@ -244,6 +252,7 @@ The default password-based authentication is suitable for demos but not producti
 Before going to production, verify:
 
 - [ ] Authentication integrated with corporate identity
+- [ ] Managed identity enabled with proper RBAC roles assigned
 - [ ] HTTPS enabled with valid certificates
 - [ ] Private endpoints configured for Azure services
 - [ ] Minimum 2 replicas for high availability
