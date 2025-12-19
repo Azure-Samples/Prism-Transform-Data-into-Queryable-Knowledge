@@ -1,5 +1,5 @@
 <template>
-  <div class="px-4 py-6 sm:px-0 flex flex-col h-[calc(100vh-120px)] overflow-hidden">
+  <div class="px-4 py-6 sm:px-0 flex flex-col h-[calc(100vh-100px)]">
     <!-- Header with context info -->
     <div class="mb-3 flex-shrink-0">
       <div class="flex justify-between items-start">
@@ -24,35 +24,18 @@
       </div>
     </div>
 
-    <!-- Context Card (when discussing a specific question) - compact -->
-    <div v-if="chatContext" class="mb-3 bg-indigo-50 border border-indigo-200 rounded-lg p-3 flex-shrink-0">
-      <div class="flex justify-between items-start">
-        <div class="flex-1">
-          <div class="text-xs font-medium text-indigo-600 mb-1">
-            Discussing: {{ chatContext.section_id }} / {{ chatContext.question_id }}
-          </div>
-          <p class="text-sm font-medium text-gray-900 mb-1">{{ chatContext.question_text }}</p>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
-            <div>
-              <span class="font-medium text-gray-500">Current Answer:</span>
-              <span class="ml-1 text-gray-700">{{ chatContext.current_answer || 'N/A' }}</span>
-            </div>
-            <div>
-              <span class="font-medium text-gray-500">Reference:</span>
-              <span class="ml-1 text-gray-700">{{ truncate(chatContext.current_reference, 60) || 'N/A' }}</span>
-            </div>
-            <div>
-              <span class="font-medium text-gray-500">Comments:</span>
-              <span class="ml-1 text-gray-700">{{ truncate(chatContext.current_comments, 60) || 'N/A' }}</span>
-            </div>
-          </div>
-        </div>
+    <!-- Context Card (when discussing a specific question) - minimal -->
+    <div v-if="chatContext" class="mb-2 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2 flex-shrink-0">
+      <div class="flex items-center gap-2 text-xs">
+        <span class="font-medium text-indigo-600">{{ chatContext.section_id }}/{{ chatContext.question_id }}:</span>
+        <span class="text-gray-900 truncate flex-1">{{ truncate(chatContext.question_text, 80) }}</span>
+        <span class="text-gray-500">Answer: {{ truncate(chatContext.current_answer, 30) || 'N/A' }}</span>
       </div>
     </div>
 
-    <!-- Chat Messages - ensure minimum height -->
-    <div class="flex-1 bg-white shadow rounded-lg overflow-hidden flex flex-col min-h-[250px]">
-      <div ref="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-4">
+    <!-- Chat Messages - takes all remaining space -->
+    <div class="flex-1 bg-white shadow rounded-lg overflow-hidden flex flex-col min-h-0">
+      <div ref="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
         <!-- Empty state -->
         <div v-if="chatHistory.length === 0" class="text-center py-12">
           <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -71,19 +54,19 @@
           v-for="(message, idx) in chatHistory"
           :key="idx"
           :class="[
-            'flex',
+            'flex w-full',
             message.role === 'user' ? 'justify-end' : 'justify-start'
           ]"
         >
           <div
             :class="[
-              'max-w-[80%] rounded-lg px-4 py-2',
+              'max-w-[85%] rounded-lg px-4 py-3 shadow-sm border',
               message.role === 'user'
-                ? 'bg-indigo-600 text-white'
-                : 'bg-gray-100 text-gray-900'
+                ? 'bg-indigo-600 text-white border-indigo-700'
+                : 'bg-slate-50 text-gray-900 border-slate-200'
             ]"
           >
-            <p class="text-sm whitespace-pre-wrap">{{ message.content }}</p>
+            <p class="text-sm whitespace-pre-wrap leading-relaxed">{{ message.content }}</p>
           </div>
         </div>
 
@@ -121,52 +104,65 @@
       </div>
     </div>
 
-    <!-- Update Result Panel (only when context is set) - compact -->
-    <div v-if="chatContext && chatHistory.length > 0" class="mt-3 bg-white shadow rounded-lg p-3 flex-shrink-0">
-      <h3 class="text-sm font-medium text-gray-900 mb-2">Update Original Result</h3>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div>
-          <label class="block text-xs font-medium text-gray-500 mb-1">New Answer</label>
-          <input
-            v-model="updateForm.answer"
-            type="text"
-            class="w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm bg-white text-gray-900"
-            placeholder="Updated answer..."
-          />
-        </div>
-        <div>
-          <label class="block text-xs font-medium text-gray-500 mb-1">New Reference</label>
-          <input
-            v-model="updateForm.reference"
-            type="text"
-            class="w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm bg-white text-gray-900"
-            placeholder="Document references..."
-          />
-        </div>
-        <div>
-          <label class="block text-xs font-medium text-gray-500 mb-1">New Comments</label>
-          <input
-            v-model="updateForm.comments"
-            type="text"
-            class="w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm bg-white text-gray-900"
-            placeholder="Additional comments..."
-          />
-        </div>
-      </div>
-      <div class="mt-2 flex justify-end gap-2">
-        <button
-          @click="copyLastResponse"
-          class="px-3 py-1 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+    <!-- Update Result Panel (only when context is set) - collapsible -->
+    <div v-if="chatContext && chatHistory.length > 0" class="mt-2 bg-white shadow rounded-lg flex-shrink-0">
+      <button
+        @click="showUpdatePanel = !showUpdatePanel"
+        class="w-full px-3 py-2 flex items-center justify-between text-sm font-medium text-gray-900 hover:bg-gray-50 rounded-lg"
+      >
+        <span>Update Original Result</span>
+        <svg
+          :class="['w-4 h-4 transition-transform', showUpdatePanel ? 'rotate-180' : '']"
+          fill="none" stroke="currentColor" viewBox="0 0 24 24"
         >
-          Copy Last Response
-        </button>
-        <button
-          @click="updateResult"
-          :disabled="updating || (!updateForm.answer && !updateForm.reference && !updateForm.comments)"
-          class="px-3 py-1 text-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
-        >
-          {{ updating ? 'Updating...' : 'Update Result' }}
-        </button>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      <div v-show="showUpdatePanel" class="px-3 pb-3">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">New Answer</label>
+            <input
+              v-model="updateForm.answer"
+              type="text"
+              class="w-full px-2 py-1 border border-gray-300 rounded text-sm bg-white text-gray-900"
+              placeholder="Updated answer..."
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">New Reference</label>
+            <input
+              v-model="updateForm.reference"
+              type="text"
+              class="w-full px-2 py-1 border border-gray-300 rounded text-sm bg-white text-gray-900"
+              placeholder="Document references..."
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">New Comments</label>
+            <input
+              v-model="updateForm.comments"
+              type="text"
+              class="w-full px-2 py-1 border border-gray-300 rounded text-sm bg-white text-gray-900"
+              placeholder="Additional comments..."
+            />
+          </div>
+        </div>
+        <div class="mt-2 flex justify-end gap-2">
+          <button
+            @click="copyLastResponse"
+            class="px-2 py-1 text-xs border border-gray-300 rounded text-gray-700 hover:bg-gray-50"
+          >
+            Copy Last Response
+          </button>
+          <button
+            @click="updateResult"
+            :disabled="updating || (!updateForm.answer && !updateForm.reference && !updateForm.comments)"
+            class="px-2 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {{ updating ? 'Updating...' : 'Update Result' }}
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -185,6 +181,7 @@ const inputMessage = ref('')
 const loading = ref(false)
 const updating = ref(false)
 const messagesContainer = ref(null)
+const showUpdatePanel = ref(false)
 
 const updateForm = ref({
   answer: '',
