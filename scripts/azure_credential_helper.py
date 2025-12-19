@@ -29,7 +29,6 @@ Usage:
     )
 """
 
-import os
 import sys
 from typing import Callable, Optional
 
