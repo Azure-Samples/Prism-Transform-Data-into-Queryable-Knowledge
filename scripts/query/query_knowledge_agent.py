@@ -36,39 +36,16 @@ logger = get_logger(__name__)
 load_dotenv()
 
 
+# Import shared index naming utility (handles sanitization for Azure Search requirements)
+from scripts.search_index.index_utils import get_index_name
+
 # Configuration
 AZURE_SEARCH_ENDPOINT = os.getenv("AZURE_SEARCH_ENDPOINT")
 AZURE_SEARCH_ADMIN_KEY = os.getenv("AZURE_SEARCH_ADMIN_KEY")
 AZURE_SEARCH_API_VERSION = os.getenv("AZURE_SEARCH_API_VERSION", "2025-08-01-preview")
-AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY") or os.getenv("AZURE_OPENAI_KEY")
 AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
 AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2025-01-01-preview")
 AZURE_OPENAI_CHAT_DEPLOYMENT = os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT_NAME", "gpt-5-chat")
-
-
-def get_index_name() -> str:
-    """
-    Get index name from configuration.
-
-    Priority:
-    1. Derived from PRISM_PROJECT_NAME: prism-{project}-index (automatic)
-    2. AZURE_SEARCH_INDEX_NAME env var (only if no project specified)
-    3. Default: prism-default-index
-
-    This ensures each project automatically gets its own index without
-    requiring manual configuration. No need to hardcode index names in config.json.
-    """
-    # Priority 1: Derive from project name (automatic per-project isolation)
-    project_name = os.getenv("PRISM_PROJECT_NAME")
-    if project_name:
-        return f"prism-{project_name}-index"
-
-    # Priority 2: Explicit override (only when no project specified)
-    explicit_name = os.getenv("AZURE_SEARCH_INDEX_NAME")
-    if explicit_name:
-        return explicit_name
-
-    return "prism-default-index"
 
 
 # Dynamic index/agent/source names

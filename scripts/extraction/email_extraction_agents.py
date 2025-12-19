@@ -15,6 +15,7 @@ from typing import Dict
 from dotenv import load_dotenv
 
 from scripts.logging_config import get_logger
+from scripts.azure_credential_helper import get_token_provider
 
 logger = get_logger(__name__)
 
@@ -28,7 +29,6 @@ from agent_framework.azure import AzureOpenAIChatClient
 load_dotenv()
 
 # Configuration
-AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY") or os.getenv("AZURE_OPENAI_KEY")
 AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
 AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2025-01-01-preview")
 AZURE_OPENAI_CHAT_DEPLOYMENT = os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT_NAME", "gpt-5-chat")
@@ -126,11 +126,11 @@ _email_enhancement_agent = None
 
 
 def _get_client():
-    """Lazily initialize the Azure OpenAI client."""
+    """Lazily initialize the Azure OpenAI client using managed identity."""
     global _client
     if _client is None:
         _client = AzureOpenAIChatClient(
-            api_key=AZURE_OPENAI_API_KEY,
+            azure_ad_token_provider=get_token_provider(),
             endpoint=AZURE_OPENAI_ENDPOINT,
             deployment_name=AZURE_OPENAI_CHAT_DEPLOYMENT,
             api_version=AZURE_OPENAI_API_VERSION

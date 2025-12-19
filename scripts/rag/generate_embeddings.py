@@ -19,8 +19,8 @@ from typing import List, Dict
 from dotenv import load_dotenv
 
 from openai import AzureOpenAI
-from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from scripts.logging_config import get_logger
+from scripts.azure_credential_helper import get_token_provider
 from apps.api.app.services.storage_service import get_storage_service
 
 logger = get_logger(__name__)
@@ -70,14 +70,10 @@ def init_openai_client():
         logger.error("AZURE_OPENAI_ENDPOINT not set")
         return None
 
-    # Use DefaultAzureCredential for managed identity auth
-    # Works with: Managed Identity (Container Apps), Azure CLI, VS Code, etc.
-    credential = DefaultAzureCredential()
-    token_provider = get_bearer_token_provider(credential, "https://cognitiveservices.azure.com/.default")
-
+    # Use shared credential helper (handles errors, provides clear messages)
     logger.info("Using DefaultAzureCredential for Azure OpenAI authentication")
     return AzureOpenAI(
-        azure_ad_token_provider=token_provider,
+        azure_ad_token_provider=get_token_provider(),
         azure_endpoint=endpoint,
         api_version=api_version
     )

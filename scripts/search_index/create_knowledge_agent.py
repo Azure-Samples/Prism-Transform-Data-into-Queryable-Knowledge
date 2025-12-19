@@ -78,29 +78,8 @@ def verify_knowledge_source_exists(client: SearchIndexClient, source_name: str) 
         return False
 
 
-def get_index_name() -> str:
-    """
-    Get index name from configuration.
-
-    Priority:
-    1. Derived from PRISM_PROJECT_NAME: prism-{project}-index (automatic)
-    2. AZURE_SEARCH_INDEX_NAME env var (only if no project specified)
-    3. Default: prism-default-index
-
-    This ensures each project automatically gets its own index without
-    requiring manual configuration.
-    """
-    # Priority 1: Derive from project name (automatic per-project isolation)
-    project_name = os.getenv("PRISM_PROJECT_NAME")
-    if project_name:
-        return f"prism-{project_name}-index"
-
-    # Priority 2: Explicit override (only when no project specified)
-    explicit_name = os.getenv("AZURE_SEARCH_INDEX_NAME")
-    if explicit_name:
-        return explicit_name
-
-    return "prism-default-index"
+# Import shared index naming utility (handles sanitization for Azure Search requirements)
+from scripts.search_index.index_utils import get_index_name
 
 
 def _update_project_config(agent_name: str):
@@ -132,14 +111,20 @@ def main(force: bool = False):
     api_version = os.getenv("AZURE_SEARCH_API_VERSION", "2025-08-01-preview")
 
     # Azure OpenAI configuration
+    # Note: Knowledge Agent configuration stored in Azure Search requires either:
+    # 1. API key (if key-based auth is enabled on Azure OpenAI)
+    # 2. Managed identity (Azure Search system identity with RBAC on Azure OpenAI)
     aoai_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
     aoai_api_key = os.getenv("AZURE_OPENAI_API_KEY") or os.getenv("AZURE_OPENAI_KEY")
     aoai_chat_deployment = os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT_NAME")
     aoai_agent_model = os.getenv("AZURE_OPENAI_AGENT_MODEL_NAME", "gpt-4.1")
 
-    if not aoai_endpoint or not aoai_chat_deployment or not aoai_api_key:
-        logger.error("Azure OpenAI configuration not found in .env")
+    if not aoai_endpoint or not aoai_chat_deployment:
+        logger.error("Azure OpenAI endpoint and deployment name are required in .env")
         return 1
+
+    if not aoai_api_key:
+        logger.info("No API key provided - Azure Search will use its managed identity for the Knowledge Agent")
 
     client = get_index_client()
     if not client:
@@ -168,9 +153,10 @@ def main(force: bool = False):
         logger.warning(f"Could not check existing agents: {e}")
 
     # Create knowledge agent
+    # If no API key, pass None which tells Azure Search to use its managed identity
     aoai_params = AzureOpenAIVectorizerParameters(
         resource_url=aoai_endpoint,
-        api_key=aoai_api_key,
+        api_key=aoai_api_key if aoai_api_key else None,
         deployment_name=aoai_chat_deployment,
         model_name=aoai_agent_model
     )

@@ -45,24 +45,8 @@ def get_project_name() -> str:
     return os.getenv("PRISM_PROJECT_NAME", "_example")
 
 
-def get_index_name() -> str:
-    """
-    Get index name from configuration.
-
-    Priority:
-    1. Derived from PRISM_PROJECT_NAME: prism-{project}-index (automatic)
-    2. AZURE_SEARCH_INDEX_NAME env var (only if no project specified)
-    3. Default: prism-default-index
-    """
-    project_name = get_project_name()
-    if project_name:
-        return f"prism-{project_name}-index"
-
-    explicit_name = os.getenv("AZURE_SEARCH_INDEX_NAME")
-    if explicit_name:
-        return explicit_name
-
-    return "prism-default-index"
+# Import shared index naming utility
+from scripts.search_index.index_utils import get_index_name
 
 
 def load_embedded_chunks() -> List[Dict]:

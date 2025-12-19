@@ -18,6 +18,7 @@ from typing import Dict, Any, Optional, List
 from dotenv import load_dotenv
 
 from scripts.logging_config import get_logger
+from scripts.azure_credential_helper import get_credential, is_credential_available, get_credential_error
 from apps.api.app.services.storage_service import get_storage_service
 
 logger = get_logger(__name__)
@@ -26,21 +27,32 @@ logger = get_logger(__name__)
 load_dotenv()
 
 # Azure OpenAI config for evaluators
-# Support both AZURE_OPENAI_API_KEY and AZURE_OPENAI_KEY (azd uses the latter)
-AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY") or os.getenv("AZURE_OPENAI_KEY")
 AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
 AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2025-01-01-preview")
 AZURE_OPENAI_CHAT_DEPLOYMENT = os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT_NAME", "gpt-4.1")
 
 
-def get_model_config() -> Dict[str, str]:
-    """Get model configuration for evaluators"""
-    return {
+def get_model_config() -> Dict[str, Any]:
+    """
+    Get model configuration for evaluators using DefaultAzureCredential.
+
+    Azure AI Evaluation SDK supports azure_credential parameter for managed identity auth.
+    """
+    config = {
         "azure_endpoint": AZURE_OPENAI_ENDPOINT,
-        "api_key": AZURE_OPENAI_API_KEY,
         "azure_deployment": AZURE_OPENAI_CHAT_DEPLOYMENT,
         "api_version": AZURE_OPENAI_API_VERSION,
     }
+
+    # Use DefaultAzureCredential for authentication
+    if is_credential_available():
+        config["azure_credential"] = get_credential()
+        logger.debug("Using DefaultAzureCredential for evaluation")
+    else:
+        error = get_credential_error()
+        logger.warning(f"Azure credential not available: {error}")
+
+    return config
 
 
 def evaluate_single_answer(
@@ -77,9 +89,13 @@ def evaluate_single_answer(
 
     model_config = get_model_config()
 
-    if not all([AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT]):
-        logger.error("Azure OpenAI credentials not configured")
-        return {"error": "Azure OpenAI not configured"}
+    if not AZURE_OPENAI_ENDPOINT:
+        logger.error("Azure OpenAI endpoint not configured")
+        return {"error": "Azure OpenAI endpoint not configured"}
+
+    if not is_credential_available():
+        logger.error(f"Azure credential not available: {get_credential_error()}")
+        return {"error": "Azure authentication not configured"}
 
     evaluation_results = {
         "evaluated_at": datetime.utcnow().isoformat() + "Z",

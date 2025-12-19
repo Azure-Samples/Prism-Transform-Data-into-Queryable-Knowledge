@@ -143,20 +143,32 @@ def create_index_definition(index_name: str, vector_dimensions: int = 1024) -> S
 
     # Get Azure OpenAI embedding configuration
     aoai_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
-    aoai_api_key = os.getenv("AZURE_OPENAI_API_KEY") or os.getenv("AZURE_OPENAI_KEY")
     aoai_embedding_deployment = os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME", "text-embedding-3-large")
     aoai_embedding_model = os.getenv("AZURE_OPENAI_EMBEDDING_MODEL_NAME", "text-embedding-3-large")
 
+    # Note: The vectorizer configuration stored in Azure Search requires either:
+    # 1. API key (if key-based auth is enabled on Azure OpenAI)
+    # 2. Managed identity (Azure Search system identity with RBAC on Azure OpenAI)
+    #
+    # We prefer managed identity but fall back to API key if available.
+    # For managed identity: Azure Search service must have system-assigned identity
+    # with "Cognitive Services OpenAI User" role on the Azure OpenAI resource.
+    aoai_api_key = os.getenv("AZURE_OPENAI_API_KEY") or os.getenv("AZURE_OPENAI_KEY")
+
     # Configure Azure OpenAI Vectorizer for query embeddings
+    # If no API key, use None which tells Azure Search to use its managed identity
     vectorizer = AzureOpenAIVectorizer(
         vectorizer_name="prism-aoai-vectorizer",
         parameters=AzureOpenAIVectorizerParameters(
             resource_url=aoai_endpoint,
-            api_key=aoai_api_key,
+            api_key=aoai_api_key if aoai_api_key else None,
             deployment_name=aoai_embedding_deployment,
             model_name=aoai_embedding_model
         )
     )
+
+    if not aoai_api_key:
+        logger.info("No API key provided - Azure Search will use its managed identity for vectorization")
 
     # Configure vector search (HNSW algorithm)
     vector_search = VectorSearch(
@@ -215,29 +227,8 @@ def create_index_definition(index_name: str, vector_dimensions: int = 1024) -> S
     return index
 
 
-def get_index_name() -> str:
-    """
-    Get index name from configuration.
-
-    Priority:
-    1. Derived from PRISM_PROJECT_NAME: prism-{project}-index (automatic)
-    2. AZURE_SEARCH_INDEX_NAME env var (only if no project specified)
-    3. Default: prism-default-index
-
-    This ensures each project automatically gets its own index without
-    requiring manual configuration.
-    """
-    # Priority 1: Derive from project name (automatic per-project isolation)
-    project_name = os.getenv("PRISM_PROJECT_NAME")
-    if project_name:
-        return f"prism-{project_name}-index"
-
-    # Priority 2: Explicit override (only when no project specified)
-    explicit_name = os.getenv("AZURE_SEARCH_INDEX_NAME")
-    if explicit_name:
-        return explicit_name
-
-    return "prism-default-index"
+# Import shared index naming utility (handles sanitization for Azure Search requirements)
+from scripts.search_index.index_utils import get_index_name
 
 
 def main(force: bool = False):
