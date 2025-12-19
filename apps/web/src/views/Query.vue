@@ -1,7 +1,7 @@
 <template>
-  <div class="px-4 py-6 sm:px-0 flex flex-col h-[calc(100vh-200px)]">
+  <div class="px-4 py-6 sm:px-0 flex flex-col h-[calc(100vh-120px)] overflow-hidden">
     <!-- Header with context info -->
-    <div class="mb-4">
+    <div class="mb-3 flex-shrink-0">
       <div class="flex justify-between items-start">
         <div>
           <h2 class="text-2xl font-bold text-gray-900">
@@ -24,14 +24,14 @@
       </div>
     </div>
 
-    <!-- Context Card (when discussing a specific question) -->
-    <div v-if="chatContext" class="mb-4 bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+    <!-- Context Card (when discussing a specific question) - compact -->
+    <div v-if="chatContext" class="mb-3 bg-indigo-50 border border-indigo-200 rounded-lg p-3 flex-shrink-0">
       <div class="flex justify-between items-start">
         <div class="flex-1">
           <div class="text-xs font-medium text-indigo-600 mb-1">
             Discussing: {{ chatContext.section_id }} / {{ chatContext.question_id }}
           </div>
-          <p class="text-sm font-medium text-gray-900 mb-2">{{ chatContext.question_text }}</p>
+          <p class="text-sm font-medium text-gray-900 mb-1">{{ chatContext.question_text }}</p>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
             <div>
               <span class="font-medium text-gray-500">Current Answer:</span>
@@ -39,19 +39,19 @@
             </div>
             <div>
               <span class="font-medium text-gray-500">Reference:</span>
-              <span class="ml-1 text-gray-700">{{ chatContext.current_reference || 'N/A' }}</span>
+              <span class="ml-1 text-gray-700">{{ truncate(chatContext.current_reference, 60) || 'N/A' }}</span>
             </div>
             <div>
               <span class="font-medium text-gray-500">Comments:</span>
-              <span class="ml-1 text-gray-700">{{ chatContext.current_comments || 'N/A' }}</span>
+              <span class="ml-1 text-gray-700">{{ truncate(chatContext.current_comments, 60) || 'N/A' }}</span>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Chat Messages -->
-    <div class="flex-1 bg-white shadow rounded-lg overflow-hidden flex flex-col">
+    <!-- Chat Messages - ensure minimum height -->
+    <div class="flex-1 bg-white shadow rounded-lg overflow-hidden flex flex-col min-h-[250px]">
       <div ref="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-4">
         <!-- Empty state -->
         <div v-if="chatHistory.length === 0" class="text-center py-12">
@@ -121,16 +121,16 @@
       </div>
     </div>
 
-    <!-- Update Result Panel (only when context is set) -->
-    <div v-if="chatContext && chatHistory.length > 0" class="mt-4 bg-white shadow rounded-lg p-4">
-      <h3 class="text-sm font-medium text-gray-900 mb-3">Update Original Result</h3>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <!-- Update Result Panel (only when context is set) - compact -->
+    <div v-if="chatContext && chatHistory.length > 0" class="mt-3 bg-white shadow rounded-lg p-3 flex-shrink-0">
+      <h3 class="text-sm font-medium text-gray-900 mb-2">Update Original Result</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div>
           <label class="block text-xs font-medium text-gray-500 mb-1">New Answer</label>
           <input
             v-model="updateForm.answer"
             type="text"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white text-gray-900"
+            class="w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm bg-white text-gray-900"
             placeholder="Updated answer..."
           />
         </div>
@@ -139,7 +139,7 @@
           <input
             v-model="updateForm.reference"
             type="text"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white text-gray-900"
+            class="w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm bg-white text-gray-900"
             placeholder="Document references..."
           />
         </div>
@@ -148,22 +148,22 @@
           <input
             v-model="updateForm.comments"
             type="text"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white text-gray-900"
+            class="w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm bg-white text-gray-900"
             placeholder="Additional comments..."
           />
         </div>
       </div>
-      <div class="mt-3 flex justify-end gap-2">
+      <div class="mt-2 flex justify-end gap-2">
         <button
           @click="copyLastResponse"
-          class="px-3 py-1.5 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+          class="px-3 py-1 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
         >
           Copy Last Response
         </button>
         <button
           @click="updateResult"
           :disabled="updating || (!updateForm.answer && !updateForm.reference && !updateForm.comments)"
-          class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
+          class="px-3 py-1 text-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
         >
           {{ updating ? 'Updating...' : 'Update Result' }}
         </button>
@@ -191,6 +191,12 @@ const updateForm = ref({
   reference: '',
   comments: ''
 })
+
+// Helper to truncate long text
+const truncate = (text, maxLength) => {
+  if (!text) return text
+  return text.length > maxLength ? text.substring(0, maxLength) + '...' : text
+}
 
 // Watch for context changes and pre-fill update form
 watch(chatContext, (newContext) => {

@@ -23,9 +23,7 @@ param frontendAppName string
 @description('Azure AI Services endpoint')
 param aiServicesEndpoint string
 
-@secure()
-@description('Azure AI Services key')
-param aiServicesKey string
+// aiServicesKey parameter removed - using managed identity instead (key-based auth is disabled on AI Services)
 
 @description('Chat model deployment name (for Knowledge Agents/agentic retrieval)')
 param chatDeploymentName string
@@ -50,6 +48,7 @@ param searchAdminKey string
 param authPassword string
 
 // Monitoring
+@secure()
 @description('Application Insights connection string')
 param applicationInsightsConnectionString string = ''
 
@@ -63,8 +62,7 @@ param storageBlobEndpoint string = ''
 @description('Azure Storage container name')
 param storageContainerName string = ''
 
-@description('Azure Storage account resource ID (for role assignment)')
-param storageAccountId string = ''
+// storageAccountId parameter removed - role assignment handled in main.bicep
 
 // ============================================================================
 // Container Registry
@@ -158,10 +156,7 @@ resource backendApp 'Microsoft.App/containerApps@2024-03-01' = {
           name: 'registry-password'
           value: containerRegistry.listCredentials().passwords[0].value
         }
-        {
-          name: 'ai-services-key'
-          value: aiServicesKey
-        }
+        // ai-services-key removed - using managed identity instead (key-based auth is disabled)
         {
           name: 'search-admin-key'
           value: searchAdminKey
@@ -187,10 +182,7 @@ resource backendApp 'Microsoft.App/containerApps@2024-03-01' = {
               name: 'AZURE_OPENAI_ENDPOINT'
               value: aiServicesEndpoint
             }
-            {
-              name: 'AZURE_OPENAI_API_KEY'
-              secretRef: 'ai-services-key'
-            }
+            // AZURE_OPENAI_API_KEY removed - using managed identity instead (key-based auth is disabled)
             {
               name: 'AZURE_OPENAI_CHAT_DEPLOYMENT_NAME'
               value: chatDeploymentName

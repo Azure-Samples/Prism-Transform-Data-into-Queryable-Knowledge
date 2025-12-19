@@ -152,7 +152,7 @@ def get_client():
     if '_client' not in _agent_cache:
         logger.debug("Initializing Azure OpenAI client with DefaultAzureCredential")
         _agent_cache['_client'] = AzureOpenAIChatClient(
-            azure_ad_token_provider=get_token_provider(),
+            ad_token_provider=get_token_provider(),
             endpoint=AZURE_OPENAI_ENDPOINT,
             deployment_name=AZURE_OPENAI_CHAT_DEPLOYMENT,
             api_version=AZURE_OPENAI_API_VERSION

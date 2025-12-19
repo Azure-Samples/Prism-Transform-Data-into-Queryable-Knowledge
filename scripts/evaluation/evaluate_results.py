@@ -36,21 +36,17 @@ def get_model_config() -> Dict[str, Any]:
     """
     Get model configuration for evaluators using DefaultAzureCredential.
 
-    Azure AI Evaluation SDK supports azure_credential parameter for managed identity auth.
+    Azure AI Evaluation SDK automatically uses DefaultAzureCredential when api_key is not provided.
+    See: https://learn.microsoft.com/en-us/azure/ai-foundry/how-to/develop/evaluate-sdk
     """
+    # When api_key is not provided, the SDK automatically uses DefaultAzureCredential
     config = {
         "azure_endpoint": AZURE_OPENAI_ENDPOINT,
         "azure_deployment": AZURE_OPENAI_CHAT_DEPLOYMENT,
         "api_version": AZURE_OPENAI_API_VERSION,
     }
 
-    # Use DefaultAzureCredential for authentication
-    if is_credential_available():
-        config["azure_credential"] = get_credential()
-        logger.debug("Using DefaultAzureCredential for evaluation")
-    else:
-        error = get_credential_error()
-        logger.warning(f"Azure credential not available: {error}")
+    logger.debug("Using DefaultAzureCredential for evaluation (no api_key provided)")
 
     return config
 

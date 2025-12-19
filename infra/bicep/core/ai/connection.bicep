@@ -51,6 +51,7 @@ resource connection 'Microsoft.CognitiveServices/accounts/projects/connections@2
   properties: {
     category: connectionCategory
     target: connectionTarget
+    #disable-next-line BCP225
     authType: !empty(connectionApiKey) ? 'ApiKey' : 'AAD'
     credentials: !empty(connectionApiKey) ? {
       key: connectionApiKey

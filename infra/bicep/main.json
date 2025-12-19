@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.38.33.27573",
-      "templateHash": "11991232301153338582"
+      "templateHash": "9854120367471944883"
     }
   },
   "parameters": {
@@ -1076,9 +1076,6 @@
           "aiServicesEndpoint": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'ai-foundry'), '2025-04-01').outputs.endpoint.value]"
           },
-          "aiServicesKey": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'ai-foundry'), '2025-04-01').outputs.key.value]"
-          },
           "chatDeploymentName": {
             "value": "[parameters('chatDeploymentName')]"
           },
@@ -1108,9 +1105,6 @@
           },
           "storageContainerName": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'storage'), '2025-04-01').outputs.containerName.value]"
-          },
-          "storageAccountId": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'storage'), '2025-04-01').outputs.id.value]"
           }
         },
         "template": {
@@ -1120,7 +1114,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.38.33.27573",
-              "templateHash": "17282397315926084755"
+              "templateHash": "9188888346740745713"
             }
           },
           "parameters": {
@@ -1167,12 +1161,6 @@
                 "description": "Azure AI Services endpoint"
               }
             },
-            "aiServicesKey": {
-              "type": "securestring",
-              "metadata": {
-                "description": "Azure AI Services key"
-              }
-            },
             "chatDeploymentName": {
               "type": "string",
               "metadata": {
@@ -1211,7 +1199,7 @@
               }
             },
             "applicationInsightsConnectionString": {
-              "type": "string",
+              "type": "securestring",
               "defaultValue": "",
               "metadata": {
                 "description": "Application Insights connection string"
@@ -1236,13 +1224,6 @@
               "defaultValue": "",
               "metadata": {
                 "description": "Azure Storage container name"
-              }
-            },
-            "storageAccountId": {
-              "type": "string",
-              "defaultValue": "",
-              "metadata": {
-                "description": "Azure Storage account resource ID (for role assignment)"
               }
             }
           },
@@ -1340,10 +1321,6 @@
                       "value": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', parameters('registryName')), '2023-11-01-preview').passwords[0].value]"
                     },
                     {
-                      "name": "ai-services-key",
-                      "value": "[parameters('aiServicesKey')]"
-                    },
-                    {
                       "name": "search-admin-key",
                       "value": "[parameters('searchAdminKey')]"
                     },
@@ -1366,10 +1343,6 @@
                         {
                           "name": "AZURE_OPENAI_ENDPOINT",
                           "value": "[parameters('aiServicesEndpoint')]"
-                        },
-                        {
-                          "name": "AZURE_OPENAI_API_KEY",
-                          "secretRef": "ai-services-key"
                         },
                         {
                           "name": "AZURE_OPENAI_CHAT_DEPLOYMENT_NAME",

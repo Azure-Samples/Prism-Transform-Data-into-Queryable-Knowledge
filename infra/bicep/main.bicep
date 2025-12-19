@@ -89,9 +89,10 @@ var abbrs = loadJsonContent('abbreviations.json')
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
 // Generate a password if none provided
 var effectiveAuthPassword = !empty(authPassword) ? authPassword : 'Prism${uniqueString(subscription().id, environmentName, 'auth')}!'
+#disable-next-line prefer-unquoted-property-names
 var tags = {
   'azd-env-name': environmentName
-  'application': 'prism'
+  application: 'prism'
 }
 
 // Resource group name
@@ -242,7 +243,7 @@ module containerApps 'core/host/container-apps.bicep' = if (deployContainerApps)
     frontendAppName: 'prism-frontend'
     // Pass AI service configuration
     aiServicesEndpoint: aiFoundry.outputs.endpoint
-    aiServicesKey: aiFoundry.outputs.key
+    // aiServicesKey removed - using managed identity instead (key-based auth is disabled)
     chatDeploymentName: chatDeploymentName
     workflowDeploymentName: workflowDeploymentName
     embeddingDeploymentName: embeddingDeploymentName
@@ -257,7 +258,7 @@ module containerApps 'core/host/container-apps.bicep' = if (deployContainerApps)
     storageAccountName: storage.outputs.name
     storageBlobEndpoint: storage.outputs.primaryEndpoint
     storageContainerName: storage.outputs.containerName
-    storageAccountId: storage.outputs.id
+    // storageAccountId removed - role assignment handled separately
   }
 }
 
@@ -285,12 +286,8 @@ module storageRoleAssignment 'core/storage/storage-role-assignment.bicep' = if (
   params: {
     storageAccountName: storage.outputs.name
     storageAccountId: storage.outputs.id
-    principalId: containerApps.outputs.backendPrincipalId
+    principalId: containerApps!.outputs.backendPrincipalId
   }
-  dependsOn: [
-    containerApps
-    storage
-  ]
 }
 
 // ============================================================================
@@ -302,12 +299,8 @@ module aiServicesRoleAssignment 'core/ai/ai-services-role-assignment.bicep' = if
   scope: rg
   params: {
     aiServicesAccountName: aiFoundry.outputs.accountName
-    principalId: containerApps.outputs.backendPrincipalId
+    principalId: containerApps!.outputs.backendPrincipalId
   }
-  dependsOn: [
-    containerApps
-    aiFoundry
-  ]
 }
 
 // ============================================================================
@@ -322,9 +315,6 @@ module searchAiServicesRoleAssignment 'core/ai/ai-services-role-assignment.bicep
     aiServicesAccountName: aiFoundry.outputs.accountName
     principalId: search.outputs.principalId
   }
-  dependsOn: [
-    aiFoundry
-  ]
 }
 
 // ============================================================================

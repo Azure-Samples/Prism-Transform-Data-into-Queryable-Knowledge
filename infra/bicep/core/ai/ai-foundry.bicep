@@ -142,5 +142,6 @@ output accountId string = aiServicesAccount.id
 output projectName string = aiProject.name
 output projectId string = aiProject.id
 output endpoint string = aiServicesAccount.properties.endpoint
+#disable-next-line outputs-should-not-contain-secrets
 output key string = aiServicesAccount.listKeys().key1
 output principalId string = aiServicesAccount.identity.principalId

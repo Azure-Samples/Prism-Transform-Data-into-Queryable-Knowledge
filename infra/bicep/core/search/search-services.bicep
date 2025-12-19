@@ -81,5 +81,6 @@ resource searchService 'Microsoft.Search/searchServices@2024-06-01-preview' = {
 output id string = searchService.id
 output name string = searchService.name
 output endpoint string = 'https://${searchService.name}.search.windows.net'
+#disable-next-line outputs-should-not-contain-secrets
 output adminKey string = searchService.listAdminKeys().primaryKey
 output principalId string = searchService.identity.principalId

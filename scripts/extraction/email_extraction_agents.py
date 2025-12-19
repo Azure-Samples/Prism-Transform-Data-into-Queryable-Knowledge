@@ -130,7 +130,7 @@ def _get_client():
     global _client
     if _client is None:
         _client = AzureOpenAIChatClient(
-            azure_ad_token_provider=get_token_provider(),
+            ad_token_provider=get_token_provider(),
             endpoint=AZURE_OPENAI_ENDPOINT,
             deployment_name=AZURE_OPENAI_CHAT_DEPLOYMENT,
             api_version=AZURE_OPENAI_API_VERSION
