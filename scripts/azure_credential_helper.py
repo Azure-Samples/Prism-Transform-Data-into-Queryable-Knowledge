@@ -29,7 +29,6 @@ Usage:
     )
 """
 
-import sys
 from typing import Callable, Optional
 
 from scripts.logging_config import get_logger
