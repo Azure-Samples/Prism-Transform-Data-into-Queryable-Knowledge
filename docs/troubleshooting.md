@@ -235,6 +235,32 @@ This occurs when the Azure AI Services resource has key-based authentication dis
 - Check Azure AI Search service health
 - May need to upgrade service tier for higher availability
 
+### Knowledge Agent or Vectorizer authentication errors
+
+**Error**: `Could not complete model action. Key based authentication is disabled` or `Could not complete vectorization action. 403 Forbidden`
+
+This occurs when the Azure AI Search Knowledge Agent or vectorizer tries to call Azure OpenAI but doesn't have proper authentication configured.
+
+**Solution**: Azure Search's managed identity needs the `Cognitive Services OpenAI User` role on the Azure OpenAI resource:
+
+1. Get the Azure Search service principal ID:
+   ```bash
+   az search service show --name <search-name> --resource-group <rg> --query "identity.principalId" -o tsv
+   ```
+
+2. Assign the role:
+   ```bash
+   az role assignment create \
+     --role "Cognitive Services OpenAI User" \
+     --assignee-object-id <search-principal-id> \
+     --assignee-principal-type ServicePrincipal \
+     --scope "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.CognitiveServices/accounts/<ai-services-name>"
+   ```
+
+3. Recreate the Knowledge Agent (via UI rollback or API) to pick up the new configuration
+
+**Note**: New deployments via `azd up` automatically configure this role assignment.
+
 ## Getting More Help
 
 1. **Enable debug logging**:

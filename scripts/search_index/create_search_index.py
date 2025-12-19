@@ -52,7 +52,8 @@ from azure.search.documents.indexes.models import (
     AzureOpenAIVectorizer,
     AzureOpenAIVectorizerParameters,
     ScoringProfile,
-    TextWeights
+    TextWeights,
+    SearchIndexerDataNoneIdentity  # For system-assigned managed identity
 )
 
 
@@ -156,19 +157,29 @@ def create_index_definition(index_name: str, vector_dimensions: int = 1024) -> S
     aoai_api_key = os.getenv("AZURE_OPENAI_API_KEY") or os.getenv("AZURE_OPENAI_KEY")
 
     # Configure Azure OpenAI Vectorizer for query embeddings
-    # If no API key, use None which tells Azure Search to use its managed identity
-    vectorizer = AzureOpenAIVectorizer(
-        vectorizer_name="prism-aoai-vectorizer",
-        parameters=AzureOpenAIVectorizerParameters(
+    # If no API key, use Search service's system-assigned managed identity
+    if aoai_api_key:
+        vectorizer_params = AzureOpenAIVectorizerParameters(
             resource_url=aoai_endpoint,
-            api_key=aoai_api_key if aoai_api_key else None,
+            api_key=aoai_api_key,
             deployment_name=aoai_embedding_deployment,
             model_name=aoai_embedding_model
         )
-    )
-
-    if not aoai_api_key:
+    else:
+        # Use system-assigned managed identity (SearchIndexerDataNoneIdentity)
+        # Azure Search service must have "Cognitive Services OpenAI User" role on Azure OpenAI
+        vectorizer_params = AzureOpenAIVectorizerParameters(
+            resource_url=aoai_endpoint,
+            deployment_name=aoai_embedding_deployment,
+            model_name=aoai_embedding_model,
+            auth_identity=SearchIndexerDataNoneIdentity()
+        )
         logger.info("No API key provided - Azure Search will use its managed identity for vectorization")
+
+    vectorizer = AzureOpenAIVectorizer(
+        vectorizer_name="prism-aoai-vectorizer",
+        parameters=vectorizer_params
+    )
 
     # Configure vector search (HNSW algorithm)
     vector_search = VectorSearch(

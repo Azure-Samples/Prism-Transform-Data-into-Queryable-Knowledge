@@ -45,7 +45,8 @@ from azure.search.documents.indexes.models import (
     KnowledgeSourceReference,
     AzureOpenAIVectorizerParameters,
     KnowledgeAgentOutputConfiguration,
-    KnowledgeAgentOutputConfigurationModality
+    KnowledgeAgentOutputConfigurationModality,
+    SearchIndexerDataNoneIdentity  # For system-assigned managed identity
 )
 
 
@@ -153,13 +154,23 @@ def main(force: bool = False):
         logger.warning(f"Could not check existing agents: {e}")
 
     # Create knowledge agent
-    # If no API key, pass None which tells Azure Search to use its managed identity
-    aoai_params = AzureOpenAIVectorizerParameters(
-        resource_url=aoai_endpoint,
-        api_key=aoai_api_key if aoai_api_key else None,
-        deployment_name=aoai_chat_deployment,
-        model_name=aoai_agent_model
-    )
+    # If no API key, use Search service's system-assigned managed identity
+    if aoai_api_key:
+        aoai_params = AzureOpenAIVectorizerParameters(
+            resource_url=aoai_endpoint,
+            api_key=aoai_api_key,
+            deployment_name=aoai_chat_deployment,
+            model_name=aoai_agent_model
+        )
+    else:
+        # Use system-assigned managed identity (SearchIndexerDataNoneIdentity)
+        # Azure Search service must have "Cognitive Services OpenAI User" role on Azure OpenAI
+        aoai_params = AzureOpenAIVectorizerParameters(
+            resource_url=aoai_endpoint,
+            deployment_name=aoai_chat_deployment,
+            model_name=aoai_agent_model,
+            auth_identity=SearchIndexerDataNoneIdentity()
+        )
 
     output_config = KnowledgeAgentOutputConfiguration(
         modality=KnowledgeAgentOutputConfigurationModality.ANSWER_SYNTHESIS,
