@@ -327,6 +327,8 @@ azd down
 
 MIT License - see [LICENSE](LICENSE)
 
+**Important**: This project depends on third-party packages with restrictive licenses (AGPL 3.0, GPL 3.0, Commercial) that may affect your use. See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) for details.
+
 ## Trademarks
 
 This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft trademarks or logos is subject to and must follow [Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general).
