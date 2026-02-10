@@ -191,13 +191,15 @@ azd up
 ```
 
 **What gets deployed:**
-- AI Foundry with GPT-4.1, gpt-5-chat (workflows), text-embedding-3-large
+- AI Foundry with GPT-4.1, text-embedding-3-large
 - Azure Document Intelligence for PDF extraction
 - Azure AI Search with semantic ranking enabled
 - Azure Blob Storage for project data
 - Container Apps with system-assigned managed identity (backend + frontend)
 - RBAC role assignments (Storage Blob Data Contributor, Cognitive Services OpenAI User)
 - Container Registry, Log Analytics, Application Insights
+
+> **⚠️ Manual step required:** `azd up` does **not** deploy the `gpt-5-chat` model. If you want to use it for workflows, deploy it manually through the [Azure Portal](https://portal.azure.com) → your AI Foundry resource → Model deployments. Otherwise, update `AZURE_OPENAI_WORKFLOW_DEPLOYMENT_NAME` in your `.env` to `gpt-4.1`.
 
 **Get the auth password:**
 ```bash
