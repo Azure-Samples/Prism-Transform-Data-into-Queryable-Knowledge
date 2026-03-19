@@ -87,7 +87,7 @@ def _get_chunk_metadata(chunk_id: str) -> dict:
         return {}
 
 
-def search_documents(query: str) -> str:
+def search_documents(query: str, conversation_history: list = None) -> str:
     """
     Search documents using Azure AI Search Knowledge Agent with smart retry logic.
 
@@ -99,16 +99,17 @@ def search_documents(query: str) -> str:
     - Attempt 2: Simplified query (if no results)
     - Attempt 3: Expanded query with synonyms (if still no results)
 
-    Each query is independent - no conversation history is maintained to avoid token limits and crashes.
-
     Args:
         query: The user's question about the indexed documents
+        conversation_history: Optional list of {"role": "user"|"assistant", "text": str} dicts
+            representing prior Q&A pairs. Passed to the Knowledge Agent as chat history
+            so its query planner can use prior context when formulating subqueries.
 
     Returns:
         AI-generated answer with citations from the knowledge store
     """
     # Attempt 1: Original query
-    result = _perform_search(query, attempt=0, inference_keywords=[])
+    result = _perform_search(query, attempt=0, inference_keywords=[], conversation_history=conversation_history)
 
     # Check if we got meaningful results
     if "No relevant content was found" in result.get('response', ''):
@@ -118,14 +119,14 @@ def search_documents(query: str) -> str:
         simplified = _simplify_query(query)
         if simplified != query:
             logger.debug(f"Trying simplified query: '{simplified}'")
-            result = _perform_search(simplified, attempt=1, inference_keywords=[])
+            result = _perform_search(simplified, attempt=1, inference_keywords=[], conversation_history=conversation_history)
 
         # Attempt 3: Expanded query (add synonyms)
         if "No relevant content was found" in result.get('response', ''):
             expanded = _expand_query(query)
             if expanded != query:
                 logger.debug(f"Trying expanded query: '{expanded}'")
-                result = _perform_search(expanded, attempt=2, inference_keywords=[])
+                result = _perform_search(expanded, attempt=2, inference_keywords=[], conversation_history=conversation_history)
 
     # Return the response
     return result.get('response', 'Information not found in the available documents.')
@@ -183,15 +184,15 @@ def _expand_query(query: str) -> str:
 
 
 
-def _perform_search(query: str, attempt: int, inference_keywords: list) -> dict:
+def _perform_search(query: str, attempt: int, inference_keywords: list, conversation_history: list = None) -> dict:
     """
     Internal function to perform a single search attempt.
-    Each search is independent with no conversation history.
 
     Args:
         query: The search query
         attempt: Attempt number (not used, kept for compatibility)
         inference_keywords: List of words that indicate hallucination (not used, kept for compatibility)
+        conversation_history: Optional list of {"role": "user"|"assistant", "text": str} dicts
 
     Returns:
         dict with 'response' key
@@ -250,7 +251,18 @@ When providing details:
             )
         )
 
-        # 2. Add current user query (no conversation history to avoid token limits)
+        # 2. Add conversation history (prior Q&A pairs) if provided
+        if conversation_history:
+            for entry in conversation_history:
+                messages.append(
+                    KnowledgeAgentMessage(
+                        role=entry["role"],
+                        content=[KnowledgeAgentMessageTextContent(text=entry["text"])]
+                    )
+                )
+            logger.debug(f"Added {len(conversation_history)} conversation history messages")
+
+        # 3. Add current user query
         messages.append(
             KnowledgeAgentMessage(
                 role="user",

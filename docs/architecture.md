@@ -185,10 +185,11 @@ Prism uses [Azure AI Search Knowledge Agents](https://learn.microsoft.com/azure/
 ### Knowledge Agent Capabilities
 
 1. **Query Planning**: Analyzes user question and generates focused subqueries
-2. **Parallel Retrieval**: Executes subqueries simultaneously
-3. **Answer Synthesis**: Combines results into coherent answer
-4. **Citation Tracking**: Returns source documents with page numbers and relevance scores
-5. **Activity Logging**: Shows query planning steps for transparency
+2. **Conversation History**: Accepts prior Q&A as chat messages, enabling context-aware query planning across sequential questions
+3. **Parallel Retrieval**: Executes subqueries simultaneously
+4. **Answer Synthesis**: Combines results into coherent answer
+5. **Citation Tracking**: Returns source documents with page numbers and relevance scores
+6. **Activity Logging**: Shows query planning steps for transparency
 
 ### Grounding Instructions
 
@@ -235,7 +236,8 @@ The agent is configured with strict grounding:
 │  │                                                                      │    │
 │  │  For each question:                                                 │    │
 │  │    1. Build prompt                                                  │    │
-│  │    2. Query Knowledge Agent                                         │    │
+│  │    2. Query Knowledge Agent (Q2+ includes prior answers as          │    │
+│  │       chat history for context-aware retrieval)                     │    │
 │  │    3. Parse citations                                               │    │
 │  │    4. Save result                                                   │    │
 │  │    5. Update progress                                               │    │

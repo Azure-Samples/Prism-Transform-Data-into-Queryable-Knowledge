@@ -133,6 +133,8 @@ Example:
 4. Monitor progress in real-time
 5. View results when complete
 
+> **Cross-question context**: Questions within a section automatically build on each other. After the first question is answered, subsequent questions include prior answers as conversation history, so the AI can use earlier findings when searching for related information. This happens automatically — no configuration needed.
+
 ## Viewing Results
 
 ### Results Page

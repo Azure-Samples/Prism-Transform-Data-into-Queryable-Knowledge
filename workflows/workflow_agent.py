@@ -74,6 +74,50 @@ def get_search_tool(project_name: str):
     return search_documents
 
 
+def get_search_tool_with_history(project_name: str, section_id: str):
+    """
+    Get a search tool that injects prior section answers as KA conversation history.
+
+    Reads completed answers from results.json at call time and passes them as
+    user/assistant message pairs to the Knowledge Agent's query planner.
+
+    Args:
+        project_name: Name of the project
+        section_id: Section ID to pull prior answers from
+
+    Returns:
+        Search function that includes conversation history from prior answers
+    """
+    from scripts.query.query_knowledge_agent import search_documents
+
+    storage = get_storage_service()
+
+    def search_with_history(query: str) -> str:
+        """Search documents with context from previously answered questions in this section."""
+        # Build conversation history from prior answers in this section
+        conversation_history = []
+        results = storage.read_json(project_name, "output/results.json")
+        if results and section_id in results.get("sections", {}):
+            section_questions = results["sections"][section_id].get("questions", {})
+            for qid, qdata in section_questions.items():
+                q_text = qdata.get("question", "")
+                a_text = qdata.get("answer", "")
+                if q_text and a_text:
+                    conversation_history.append({"role": "user", "text": q_text})
+                    conversation_history.append({"role": "assistant", "text": a_text})
+
+        if conversation_history:
+            print(f"[SEARCH] Passing {len(conversation_history) // 2} prior Q&A pairs as chat history")
+
+        return search_documents(query, conversation_history=conversation_history if conversation_history else None)
+
+    # Preserve the original function name/doc for Agent Framework tool registration
+    search_with_history.__name__ = "search_documents"
+    search_with_history.__doc__ = search_documents.__doc__
+
+    return search_with_history
+
+
 class WorkflowAgentFactory:
     """
     Factory for creating workflow agents from configuration.
@@ -162,13 +206,16 @@ Comments: [Any additional context, technical details, or important notes]
 
         return '\n'.join(prompt_parts)
 
-    def create_question_agent(self, section: Dict, question: Dict):
+    def create_question_agent(self, section: Dict, question: Dict, question_index: int = 0):
         """
         Create an agent for a specific question.
 
         Args:
             section: Section dict
             question: Question dict
+            question_index: Position in section (0-based). Questions after the first
+                get a history-aware search tool that passes prior section answers
+                as chat history to the Knowledge Agent's query planner.
 
         Returns:
             Configured agent executor
@@ -184,11 +231,18 @@ Comments: [Any additional context, technical details, or important notes]
         safe_name = f"Section_{section_id}_Q_{question_id}"
         safe_name = safe_name.replace(' ', '_').replace('/', '_').replace('-', '_')
 
+        # First question uses plain search; subsequent questions get history-aware search
+        # so the KA query planner can use prior answers as context
+        if question_index > 0:
+            search_tool = get_search_tool_with_history(self.project_name, section_id)
+        else:
+            search_tool = self.search_tool
+
         # Create agent
         agent = self.chat_client.as_agent(
             name=safe_name,
             instructions=instructions,
-            tools=[self.search_tool]
+            tools=[search_tool]
         )
 
         # Add logging wrapper
@@ -363,7 +417,7 @@ Comments: [Any additional context, technical details, or important notes]
         savers = []
 
         for i, question in enumerate(questions):
-            agent = self.create_question_agent(section, question)
+            agent = self.create_question_agent(section, question, question_index=i)
             saver = self.create_question_saver(section, question, i)
             agents.append(agent)
             savers.append(saver)

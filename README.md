@@ -121,6 +121,7 @@ Define structured Q&A templates for systematic document analysis:
 ```
 
 - Run workflows against your knowledge base
+- **Cross-question context**: Within a section, each question's search automatically includes prior Q&A as conversation history, so the Knowledge Agent's query planner can use earlier answers for context-aware retrieval
 - Track completion percentage per section
 - Export results to CSV
 - Edit and comment on answers
