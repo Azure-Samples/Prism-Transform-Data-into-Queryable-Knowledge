@@ -1,0 +1,50 @@
+NOTICES AND INFORMATION
+
+This project incorporates material from the projects listed below.
+
+---
+
+openpyxl 3.1.5
+License: MIT
+https://openpyxl.readthedocs.io/
+Copyright (c) 2010 openpyxl
+
+python-oxmsg 0.0.1
+License: MIT
+https://github.com/scanny/python-oxmsg
+Copyright (c) 2023 Steve Canny
+
+FastAPI 0.115.0
+License: MIT
+https://fastapi.tiangolo.com/
+Copyright (c) 2018 Sebastián Ramírez
+
+Vue.js 3.x
+License: MIT
+https://vuejs.org/
+Copyright (c) 2018-present Yuxi (Evan) You
+
+tiktoken
+License: MIT
+https://github.com/openai/tiktoken
+Copyright (c) 2022 OpenAI
+
+langchain-text-splitters
+License: MIT
+https://github.com/langchain-ai/langchain
+Copyright (c) LangChain, Inc.
+
+openai (Python SDK)
+License: Apache 2.0
+https://github.com/openai/openai-python
+Copyright (c) OpenAI
+
+python-dotenv
+License: BSD-3-Clause
+https://github.com/theskumar/python-dotenv
+Copyright (c) 2014 Saurabh Kumar
+
+---
+
+For full license texts, see the individual package distributions or
+THIRD_PARTY_LICENSES.md in this repository.
