@@ -7,7 +7,7 @@ uvicorn[standard]==0.27.0
 python-multipart==0.0.18
 
 # CORS support
-python-dotenv==1.0.0
+python-dotenv==1.2.2
 
 # Async support (already in main requirements but listed for clarity)
 # asyncio - built-in
